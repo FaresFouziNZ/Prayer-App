@@ -127,7 +127,10 @@ class IqamahProfile {
 
 class PrayerEvent {          // one row per prayer per day, consumed by every surface
   final Prayer prayer; final DateTime date;
-  final DateTime adhanAt, iqamahAt, leaveByAt, closingAt, endAt;
+  final DateTime adhanAt, liveStartAt, iqamahAt, leaveByAt, closingAt, endAt;
+  // liveStartAt = adhanAt + 5 min (SRS "Live start", FR-LA-01/03/07): when the
+  // live countdown surface first appears, kept distinct from adhanAt so it
+  // doesn't compete with the plain adhan notification (FR-NT-01).
 }
 ```
 
@@ -241,6 +244,7 @@ Streak rule (in Dart, over daily aggregates): a day counts toward the streak onl
   "date": "2026-09-05",
   "phase": "iqamah",              // iqamah | window | closing
   "adhanAt": 1757075400,
+  "liveStartAt": 1757075700,      // adhanAt + 5 min; surface first appears here
   "iqamahAt": 1757076600,
   "closingAt": 1757087400,
   "endAt": 1757089200,
@@ -261,7 +265,7 @@ Phase changes are pushed (iOS) or alarm-driven (Android), but every phase's view
 | Compact Dynamic Island | leading: prayer glyph; trailing: timer. |
 | Minimal | timer only. |
 | Buttons | `LogPrayerIntent(prayer, date, status)` — `LiveActivityIntent`, runs in-process, writes via Drift (through a small Swift→Dart channel *or* directly to the SQLite file using shared App Group path — **decision at M5**; the direct-SQLite route avoids launching Dart but duplicates the write rule). Ends the activity after logging. |
-| Lifecycle | start ← push-to-start (server) or app-foreground repair; update ← push at `iqamahAt`, `closingAt`; end ← push at `endAt` with `dismissalPolicy: .immediate`, or from intent. On app foreground: end any activity whose `endAt` < now; start/repair the current one. |
+| Lifecycle | start ← push-to-start at `liveStartAt` (server) or app-foreground repair; update ← push at `iqamahAt`, `closingAt`; end ← push at `endAt` with `dismissalPolicy: .immediate`, or from intent. On app foreground: end any activity whose `endAt` < now; start/repair the current one if `now >= liveStartAt`. |
 | Tokens | On launch and on `pushToStartTokenUpdates` / `pushTokenUpdates`: write to Firestore `devices/{id}.tokens`. |
 | Stale date | `staleDate = endAt`; `relevanceScore` higher in closing phase. |
 
@@ -269,7 +273,7 @@ Phase changes are pushed (iOS) or alarm-driven (Android), but every phase's view
 
 | Element | Design |
 |---|---|
-| Trigger | `ExactAlarmReceiver` at `adhanAt`, `iqamahAt`, `closingAt`, `endAt` (alarm extras carry the content JSON). |
+| Trigger | `ExactAlarmReceiver` at `liveStartAt`, `iqamahAt`, `closingAt`, `endAt` (alarm extras carry the content JSON). |
 | Notification | `NotificationCompat.Builder` ongoing, `setUsesChronometer(true)`, `setChronometerCountDown(true)`, `setWhen(target)`; `setOnlyAlertOnce(true)`; fixed ID `LIVE_NOTIFICATION_ID`. Closing phase adds the three actions. |
 | Android 16+ (v2) | `requestPromotedOngoing(true)` + `ProgressStyle` for the status-bar chip. |
 | Cancel | at `endAt` alarm, or from the log write path. |
@@ -307,7 +311,7 @@ devices/{deviceId}                       // deviceId == Firebase Auth uid (anony
   updatedAt:       timestamp
 
 devices/{deviceId}/schedule/{YYYY-MM-DD}  // published by the app, 30 days ahead
-  fajr:    { adhanAt, iqamahAt, leaveByAt, closingAt, endAt }
+  fajr:    { adhanAt, liveStartAt, iqamahAt, leaveByAt, closingAt, endAt }
   dhuhr:   { ... } asr: {...} maghrib: {...} isha: {...}
   source:  "app" | "server"
   publishedAt: timestamp
@@ -336,7 +340,7 @@ Cloud Functions use the Admin SDK and bypass rules.
 
 | When | Task name | FCM payload |
 |---|---|---|
-| `adhanAt` | `{id}-{date}-{prayer}-start` | `event: start`, `attributes-type: PrayerActivityAttributes`, full content state, `apns-priority: 10`, alert text "Asr — iqamah in 20 min" |
+| `liveStartAt` | `{id}-{date}-{prayer}-start` | `event: start`, `attributes-type: PrayerActivityAttributes`, full content state, `apns-priority: 10`, alert text "Asr — iqamah in 20 min" |
 | `iqamahAt` | `…-window` | `event: update`, `phase: window` |
 | `closingAt` | `…-closing` | `event: update`, `phase: closing`, alert "Asr ends in 30 min" (only if `logged == false` — the function checks the device doc's last `logged` marker written by the app's log path; if unknown, sends anyway) |
 | `endAt` | `…-end` | `event: end`, `dismissal-date: now` |

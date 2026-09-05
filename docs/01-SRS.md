@@ -39,6 +39,7 @@ Out of scope for the MVP: see §6.
 | Iqamah profile | A named set of per-prayer iqamah offsets (e.g. Normal, Ramadan). |
 | Leave-by time | Iqamah time minus the user's travel minutes minus a buffer. |
 | Live surface | The iOS Live Activity (lock screen + Dynamic Island) or the Android ongoing notification with a live chronometer. |
+| Live start | Adhan time plus a fixed grace period (5 minutes) — when the live surface first appears, so it doesn't compete with the adhan notification itself. |
 
 ### 1.5 References
 - Adhan prayer-time library (Dart port `adhan_dart`, npm `adhan`).
@@ -144,22 +145,23 @@ Default offsets (minutes after adhan) — **to be confirmed**:
 
 | ID | Pri | Requirement |
 |---|---|---|
-| FR-LA-01 | M | For each prayer, a live surface shows the remaining time to iqamah (phase *iqamah*), then the remaining time until the window closes (phase *window*), then a closing state with logging actions (phase *closing*). |
+| FR-LA-01 | M | For each prayer, a live surface appears at live start (adhan + 5 minutes) and shows the remaining time to iqamah (phase *iqamah*), then the remaining time until the window closes (phase *window*), then a closing state with logging actions (phase *closing*) — remaining visible throughout unless the prayer is logged first. |
 | FR-LA-02 | M | iOS: implemented as an ActivityKit Live Activity with lock-screen, Dynamic Island compact/expanded, and StandBy presentations. Countdowns use timer-interval text so they tick without network updates. |
-| FR-LA-03 | M | iOS: the activity is started by an APNs push-to-start sent by the backend at adhan time; phase changes and end are also pushed. If a push is missed, opening the app starts or repairs the activity for the current prayer. |
+| FR-LA-03 | M | iOS: the activity is started by an APNs push-to-start sent by the backend at live start (adhan + 5 minutes); phase changes and end are also pushed. If a push is missed, opening the app starts or repairs the activity for the current prayer. |
 | FR-LA-04 | M | iOS: the *closing* phase shows buttons Jama'ah / Alone / Not yet implemented as App Intents; tapping logs the prayer without opening the app and the activity ends. |
-| FR-LA-05 | M | iOS: the activity ends at window end (pushed) or when the prayer is logged. Stale activities are ended on next app open. |
+| FR-LA-05 | M | iOS: the activity ends at window end (pushed) or when the prayer is logged — whichever comes first — so it is never dismissable by the user without one of those two events. Stale activities are ended on next app open. |
 | FR-LA-06 | M | Isha activity ends at Islamic midnight, keeping every activity under the 8-hour limit. |
-| FR-LA-07 | M | Android: implemented as an ongoing notification with a chronometer countdown, posted by an exact alarm at adhan, replaced at iqamah and at closing (same notification ID), cancelled at window end or when logged. Closing phase has the same three action buttons. |
+| FR-LA-07 | M | Android: implemented as an ongoing notification with a chronometer countdown, posted by an exact alarm at live start (adhan + 5 minutes), replaced at iqamah and at closing (same notification ID), cancelled at window end or when logged. Closing phase has the same three action buttons. |
 | FR-LA-08 | S | Android 16 Live Updates (status-bar chip) and Samsung Now Bar presentation. |
-| FR-LA-09 | M | The initial content state carries all timestamps (adhan, iqamah, closing, end) so the surface remains correct even if later updates are not delivered. |
+| FR-LA-09 | M | The initial content state carries all timestamps (live start, iqamah, closing, end) so the surface remains correct even if later updates are not delivered. |
 
 **Acceptance criteria**
-- AC-LA-1: On iOS with the app force-quit, the Live Activity appears within 60 seconds of adhan for 5 consecutive prayers.
+- AC-LA-1: On iOS with the app force-quit, the Live Activity appears within 60 seconds of live start (adhan + 5 minutes) for 5 consecutive prayers.
 - AC-LA-2: The countdown shown matches the app's own iqamah time to the second.
 - AC-LA-3: Tapping "Jama'ah" from the lock screen creates the log row and dismisses the activity without launching the app UI.
 - AC-LA-4: No activity is visible on the lock screen more than 5 minutes after its window ended, provided the backend is reachable.
-- AC-LA-5: On Android with the app force-quit, the live notification appears at adhan and updates its content at iqamah and closing.
+- AC-LA-5: On Android with the app force-quit, the live notification appears at live start (adhan + 5 minutes) and updates its content at iqamah and closing.
+- AC-LA-6: If the prayer is not logged, the live surface for it never disappears between live start and window end.
 
 ### FR-WD — Home screen widget
 
@@ -339,3 +341,4 @@ Default offsets (minutes after adhan) — **to be confirmed**:
 | 2026-09-05 | Prayer times computed locally (Adhan library), not via API | Offline reliability; the app publishes its schedule so the server never disagrees. |
 | 2026-09-05 | Local storage: SQLite via Drift | Statistics are aggregate SQL queries. |
 | 2026-09-06 | O2 resolved: stick with `adhan_dart` | Already the client-side implementation; the AC-PT-1 30-day accuracy validation against published Umm al-Qura times is still outstanding and separate from this library choice. |
+| 2026-09-06 | Live surface starts at "live start" = adhan + 5 minutes, not at adhan itself, and stays visible through iqamah/window/closing until logged or window end | 5-minute grace period so it doesn't compete with the adhan notification; the live surface's whole point is to be an unmissable reminder, so it must not disappear on its own before the user acts. Spec-only for now — the live surface itself (FR-LA) still needs native Swift/Kotlin work not yet started. |
