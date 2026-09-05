@@ -6,12 +6,18 @@ plugins {
 
 android {
     namespace = "com.fares.prayerapp.prayer_app"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned above flutter.compileSdkVersion (36 as of Flutter 3.44.4):
+    // permission_handler_android 14.x's AAR metadata requires compileSdk 37.
+    // Safe to drop back to flutter.compileSdkVersion once Flutter's own
+    // default catches up.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by flutter_local_notifications' AAR metadata.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -38,6 +44,10 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
