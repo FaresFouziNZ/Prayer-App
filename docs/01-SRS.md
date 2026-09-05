@@ -319,7 +319,7 @@ Default offsets (minutes after adhan) — **to be confirmed**:
 | # | Item | Owner | Needed by |
 |---|---|---|---|
 | O1 | Confirm current Ministry iqamah offsets (Normal, Ramadan) | Fares | M3 |
-| O2 | Choose between `adhan_dart` and `adhan` after the 30-day validation (AC-PT-1) | Fares | M1 |
+| O2 | ~~Choose between `adhan_dart` and `adhan` after the 30-day validation (AC-PT-1)~~ — resolved, see Decision log | Fares | M1 |
 | O3 | Working title / app name | Fares | M0 |
 | O4 | Bundled adhan audio clip source and licence (≤30 s) | Fares | M1 |
 | O5 | Decide closing-phase offset default (30 min proposed) | Fares | M2 |
@@ -338,3 +338,4 @@ Default offsets (minutes after adhan) — **to be confirmed**:
 | 2026-09-05 | Backend: Firebase, limited to Live Activity pushes | FCM supports Live Activity start/update/end; Cloud Tasks gives exact-time scheduling; anonymous auth avoids accounts. |
 | 2026-09-05 | Prayer times computed locally (Adhan library), not via API | Offline reliability; the app publishes its schedule so the server never disagrees. |
 | 2026-09-05 | Local storage: SQLite via Drift | Statistics are aggregate SQL queries. |
+| 2026-09-06 | O2 resolved: stick with `adhan_dart` | Already the client-side implementation; the AC-PT-1 30-day accuracy validation against published Umm al-Qura times is still outstanding and separate from this library choice. |

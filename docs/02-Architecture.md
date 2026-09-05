@@ -65,7 +65,7 @@
 | State | Riverpod | Testable, no BuildContext coupling, good for time-driven state. |
 | Storage | Drift (SQLite) | Statistics are SQL aggregates; migrations are explicit. |
 | Settings | Drift table `settings` (key/value, typed accessors) | Single store, included in backup. |
-| Prayer times | `adhan_dart` (validate vs `adhan`, see SRS O2) | Same algorithm family as npm `adhan` used server-side. |
+| Prayer times | `adhan_dart` (chosen, SRS O2 — accuracy validation per AC-PT-1 still outstanding) | Same algorithm family as npm `adhan` used server-side. |
 | Hijri (v2) | `hijri_plus` or `hijri_core` | Umm al-Qura calendar with corrections. |
 | Notifications | `flutter_local_notifications` + small native shims | Exact alarms, chronometer, actions. |
 | Widgets | `home_widget` + WidgetKit (Swift) / Glance (Kotlin) | Shared storage hand-off. |
