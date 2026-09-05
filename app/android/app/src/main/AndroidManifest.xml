@@ -1,4 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Adhan/reminder notifications (SRS FR-NT). Android 13+ requires
+         runtime consent for POST_NOTIFICATIONS; exact-time delivery under
+         Doze needs SCHEDULE_EXACT_ALARM (or USE_EXACT_ALARM, which needs no
+         user prompt but is reserved for alarm/calendar-like apps). DND
+         toggling (FR-NT-08) needs ACCESS_NOTIFICATION_POLICY, granted via
+         the system settings screen, not a runtime dialog.
+         Note: alarms scheduled via AlarmManager do NOT survive a device
+         reboot without a BOOT_COMPLETED broadcast receiver, which needs a
+         native Kotlin class — out of scope for this pass (FR-NT-07 is
+         partial: reminders resume next app launch, not automatically after
+         a reboot). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <!-- Coarse only (SRS FR-PT-03: "coarse is sufficient"); no background
          location permission is requested (NFR-05). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
