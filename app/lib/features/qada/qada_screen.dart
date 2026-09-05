@@ -143,6 +143,7 @@ class _QadaTile extends StatelessWidget {
     }
 
     return Card(
+      margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         title: Text(PrayerNames.displayName(context, prayer)),
         subtitle: subtitle == null ? null : Text(subtitle),

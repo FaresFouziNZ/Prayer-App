@@ -191,10 +191,53 @@ class _StreakStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final lit = value > 0;
     return Column(
       children: [
+        Icon(
+          Icons.local_fire_department_rounded,
+          size: 28,
+          color: lit ? scheme.secondary : scheme.outlineVariant,
+        ),
+        const SizedBox(height: 4),
         Text('$value', style: Theme.of(context).textTheme.headlineMedium),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          label,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _RateBar extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color color;
+
+  const _RateBar({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: value.clamp(0, 1),
+            minHeight: 8,
+            backgroundColor: scheme.surfaceContainerHighest,
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
       ],
     );
   }
@@ -209,23 +252,39 @@ class _MetricsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final percent = NumberFormat.percentPattern();
     return Card(
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 12),
+            _RateBar(
+              label: l10n.jamaahRateLabel(percent.format(metrics.jamaahRate)),
+              value: metrics.jamaahRate,
+              color: scheme.primary,
+            ),
             const SizedBox(height: 8),
-            Text(l10n.jamaahRateLabel(percent.format(metrics.jamaahRate))),
-            Text(l10n.onTimeRateLabel(percent.format(metrics.onTimeRate))),
+            _RateBar(
+              label: l10n.onTimeRateLabel(percent.format(metrics.onTimeRate)),
+              value: metrics.onTimeRate,
+              color: scheme.tertiary,
+            ),
+            const SizedBox(height: 10),
             Text(
               l10n.lateMissedNotLoggedLabel(
                 metrics.lateCount,
                 metrics.missedCount,
                 metrics.notLoggedCount,
               ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ),
