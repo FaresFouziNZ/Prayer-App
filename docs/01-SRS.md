@@ -324,7 +324,7 @@ Default offsets (minutes after adhan) — confirmed against the current Ministry
 | O2 | ~~Choose between `adhan_dart` and `adhan` after the 30-day validation (AC-PT-1)~~ — resolved, see Decision log | Fares | M1 |
 | O3 | ~~Working title / app name~~ — resolved, see Decision log | Fares | M0 |
 | O4 | ~~Bundled adhan audio clip source and licence (≤30 s)~~ — deferred, ship with system default sound for now, see Decision log | Fares | M1 |
-| O5 | Decide closing-phase offset default (30 min proposed) | Fares | M2 |
+| O5 | ~~Decide closing-phase offset default (30 min proposed)~~ — resolved, see Decision log | Fares | M2 |
 
 ---
 
@@ -345,3 +345,4 @@ Default offsets (minutes after adhan) — confirmed against the current Ministry
 | 2026-09-06 | O1 resolved: Normal profile's Isha offset corrected to 20 minutes (was 15); all other Normal/Ramadan offsets confirmed as-is | Verified by Fares against the current Ministry circular. |
 | 2026-09-06 | O3 resolved: app name is "My Prayer" (English) / "صلاتي" (Arabic) | Working title chosen. |
 | 2026-09-06 | O4 deferred: ship with the system default notification sound; revisit a bundled adhan clip once a licensed source is found | No licensed ≤30s clip available yet; system default is a safe interim choice already supported by the notification-sound setting. |
+| 2026-09-06 | O5 resolved: closing-phase offset default confirmed at 30 minutes | Matches `PrayerConfig.defaultClosingOffsetMinutes`, already shipped and user-configurable per prayer. |
