@@ -45,7 +45,7 @@ class _PrayerAppState extends ConsumerState<PrayerApp> with WidgetsBindingObserv
     final languageCodeAsync = ref.watch(_languageCodeProvider);
 
     return MaterialApp.router(
-      title: 'Prayer Discipline',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,

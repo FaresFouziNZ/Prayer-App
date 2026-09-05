@@ -322,7 +322,7 @@ Default offsets (minutes after adhan) — confirmed against the current Ministry
 |---|---|---|---|
 | O1 | ~~Confirm current Ministry iqamah offsets (Normal, Ramadan)~~ — resolved, see Decision log | Fares | M3 |
 | O2 | ~~Choose between `adhan_dart` and `adhan` after the 30-day validation (AC-PT-1)~~ — resolved, see Decision log | Fares | M1 |
-| O3 | Working title / app name | Fares | M0 |
+| O3 | ~~Working title / app name~~ — resolved, see Decision log | Fares | M0 |
 | O4 | Bundled adhan audio clip source and licence (≤30 s) | Fares | M1 |
 | O5 | Decide closing-phase offset default (30 min proposed) | Fares | M2 |
 
@@ -343,3 +343,4 @@ Default offsets (minutes after adhan) — confirmed against the current Ministry
 | 2026-09-06 | O2 resolved: stick with `adhan_dart` | Already the client-side implementation; the AC-PT-1 30-day accuracy validation against published Umm al-Qura times is still outstanding and separate from this library choice. |
 | 2026-09-06 | Live surface starts at "live start" = adhan + 5 minutes, not at adhan itself, and stays visible through iqamah/window/closing until logged or window end | 5-minute grace period so it doesn't compete with the adhan notification; the live surface's whole point is to be an unmissable reminder, so it must not disappear on its own before the user acts. Spec-only for now — the live surface itself (FR-LA) still needs native Swift/Kotlin work not yet started. |
 | 2026-09-06 | O1 resolved: Normal profile's Isha offset corrected to 20 minutes (was 15); all other Normal/Ramadan offsets confirmed as-is | Verified by Fares against the current Ministry circular. |
+| 2026-09-06 | O3 resolved: app name is "My Prayer" (English) / "صلاتي" (Arabic) | Working title chosen. |
