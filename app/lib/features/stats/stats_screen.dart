@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../app/prayer_names.dart';
 import '../../app/providers.dart';
 import '../../app/sunnah_labels.dart';
+import '../../domain/prayer_engine/hijri_date.dart';
 import '../../domain/prayer_engine/prayer.dart';
 import '../../domain/stats/period_stats.dart';
 import '../../domain/stats/streak.dart';
@@ -12,6 +13,12 @@ import '../../domain/stats/sunnah_stats.dart';
 import '../../domain/tracker/prayer_log_entry.dart';
 import '../../domain/tracker/sunnah.dart';
 import '../../l10n/app_localizations.dart';
+
+/// The period a user can pick in Stats (SRS FR-ST-01). Kept as its own enum
+/// rather than passing the resolved day count straight to [SegmentedButton]
+/// because "this Hijri month" resolves to a different day count every day,
+/// which can't be a fixed segment value.
+enum _StatsPeriod { d7, d30, d90, hijriMonth, all }
 
 /// SRS FR-ST: rates, per-prayer breakdown, sunnah completion, and streak
 /// for a selectable period.
@@ -23,14 +30,34 @@ class StatsScreen extends ConsumerStatefulWidget {
 }
 
 class _StatsScreenState extends ConsumerState<StatsScreen> {
-  int? _periodDays = 30;
+  _StatsPeriod _period = _StatsPeriod.d30;
+
+  /// Number of trailing days the period covers, or `null` for "all time".
+  /// "This Hijri month" resolves to the current Hijri day-of-month, since
+  /// the tabular Hijri calendar advances exactly one day per Gregorian day
+  /// — that many days back from today lands on the 1st of the month.
+  int? _resolveDays(DateTime today) {
+    switch (_period) {
+      case _StatsPeriod.d7:
+        return 7;
+      case _StatsPeriod.d30:
+        return 30;
+      case _StatsPeriod.d90:
+        return 90;
+      case _StatsPeriod.hijriMonth:
+        return HijriDate.fromGregorian(today).day;
+      case _StatsPeriod.all:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final today = ref.watch(todayProvider);
-    final logsAsync = ref.watch(periodLogsProvider(_periodDays));
-    final sunnahAsync = ref.watch(periodSunnahProvider(_periodDays));
+    final periodDays = _resolveDays(today);
+    final logsAsync = ref.watch(periodLogsProvider(periodDays));
+    final sunnahAsync = ref.watch(periodSunnahProvider(periodDays));
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.statsTitle)),
@@ -38,16 +65,23 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
-            child: SegmentedButton<int?>(
-              segments: [
-                ButtonSegment(value: 7, label: Text(l10n.period7d)),
-                ButtonSegment(value: 30, label: Text(l10n.period30d)),
-                ButtonSegment(value: 90, label: Text(l10n.period90d)),
-                ButtonSegment(value: null, label: Text(l10n.periodAll)),
-              ],
-              selected: {_periodDays},
-              onSelectionChanged: (selection) =>
-                  setState(() => _periodDays = selection.first),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<_StatsPeriod>(
+                segments: [
+                  ButtonSegment(value: _StatsPeriod.d7, label: Text(l10n.period7d)),
+                  ButtonSegment(value: _StatsPeriod.d30, label: Text(l10n.period30d)),
+                  ButtonSegment(value: _StatsPeriod.d90, label: Text(l10n.period90d)),
+                  ButtonSegment(
+                    value: _StatsPeriod.hijriMonth,
+                    label: Text(l10n.periodHijriMonth),
+                  ),
+                  ButtonSegment(value: _StatsPeriod.all, label: Text(l10n.periodAll)),
+                ],
+                selected: {_period},
+                onSelectionChanged: (selection) =>
+                    setState(() => _period = selection.first),
+              ),
             ),
           ),
           Expanded(
@@ -62,7 +96,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   logs: logs,
                   sunnahEntries: sunnahEntries,
                   today: today,
-                  periodDays: _periodDays,
+                  periodDays: periodDays,
                 ),
               ),
             ),

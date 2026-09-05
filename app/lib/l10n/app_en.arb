@@ -90,6 +90,7 @@
   "period7d": "7d",
   "period30d": "30d",
   "period90d": "90d",
+  "periodHijriMonth": "This Hijri month",
   "periodAll": "All",
   "overallLabel": "Overall",
   "currentStreakLabel": "Current streak",
