@@ -1,0 +1,234 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../app/prayer_names.dart';
+import '../../app/providers.dart';
+import '../../config/settings_keys.dart';
+import '../../domain/prayer_engine/prayer.dart';
+import '../../domain/qada/qada_balance.dart';
+import '../../domain/qada/qada_plan.dart';
+import '../../l10n/app_localizations.dart';
+
+/// SRS FR-QD: balances derived from missed records, payments, and an
+/// opening balance; never stored directly. Also exposes the opening
+/// balance (FR-QD-03) and a simple clearance plan (FR-QD-04).
+class QadaScreen extends ConsumerStatefulWidget {
+  const QadaScreen({super.key});
+
+  @override
+  ConsumerState<QadaScreen> createState() => _QadaScreenState();
+}
+
+class _QadaScreenState extends ConsumerState<QadaScreen> {
+  int _targetPerDay = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final balancesAsync = ref.watch(_qadaBalancesProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.qadaTitle)),
+      body: balancesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
+        data: (balances) => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            ListTile(
+              title: Text(l10n.qadaPlanLabel),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: _targetPerDay > 1
+                        ? () => setState(() => _targetPerDay--)
+                        : null,
+                  ),
+                  Text('$_targetPerDay'),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => setState(() => _targetPerDay++),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            for (final prayer in Prayer.values)
+              _QadaTile(
+                prayer: prayer,
+                balance: balances[prayer] ?? 0,
+                targetPerDay: _targetPerDay,
+                onRecordPayment: () => _recordPayment(context, ref, prayer),
+                onSetOpeningBalance: () =>
+                    _setOpeningBalance(context, ref, prayer, balances[prayer] ?? 0),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _recordPayment(
+    BuildContext context,
+    WidgetRef ref,
+    Prayer prayer,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final count = await showDialog<int>(
+      context: context,
+      builder: (context) => _CountDialog(
+        title: l10n.recordPaymentTitle(PrayerNames.displayName(context, prayer)),
+        label: l10n.countLabel,
+        initial: 1,
+      ),
+    );
+    if (count == null || count <= 0) return;
+    await ref.read(qadaRepositoryProvider).recordPayment(
+          prayer: prayer,
+          count: count,
+          date: ref.read(todayProvider),
+        );
+  }
+
+  Future<void> _setOpeningBalance(
+    BuildContext context,
+    WidgetRef ref,
+    Prayer prayer,
+    int currentBalance,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final count = await showDialog<int>(
+      context: context,
+      builder: (context) => _CountDialog(
+        title: l10n.setOpeningBalanceTitle(PrayerNames.displayName(context, prayer)),
+        label: l10n.openingBalanceHint,
+        initial: currentBalance,
+        allowZero: true,
+      ),
+    );
+    if (count == null || count < 0) return;
+    await ref.read(qadaRepositoryProvider).setOpeningBalance(prayer, count);
+  }
+}
+
+class _QadaTile extends StatelessWidget {
+  final Prayer prayer;
+  final int balance;
+  final int targetPerDay;
+  final VoidCallback onRecordPayment;
+  final VoidCallback onSetOpeningBalance;
+
+  const _QadaTile({
+    required this.prayer,
+    required this.balance,
+    required this.targetPerDay,
+    required this.onRecordPayment,
+    required this.onSetOpeningBalance,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    String? subtitle;
+    if (balance > 0) {
+      final plan = QadaPlan(
+        prayer: prayer,
+        currentBalance: balance,
+        targetPerDay: targetPerDay,
+      );
+      subtitle = l10n.clearByLabel(DateFormat.yMMMd().format(plan.projectedClearanceDate()));
+    }
+
+    return Card(
+      child: ListTile(
+        title: Text(PrayerNames.displayName(context, prayer)),
+        subtitle: subtitle == null ? null : Text(subtitle),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$balance', style: Theme.of(context).textTheme.titleMedium),
+            IconButton(
+              icon: const Icon(Icons.tune),
+              tooltip: l10n.setOpeningBalanceTooltip,
+              onPressed: onSetOpeningBalance,
+            ),
+          ],
+        ),
+        onTap: onRecordPayment,
+      ),
+    );
+  }
+}
+
+final _qadaBalancesProvider = FutureProvider<Map<Prayer, int>>((ref) async {
+  final repo = ref.watch(qadaRepositoryProvider);
+  final settings = ref.watch(settingsRepositoryProvider);
+  final logs = await ref.watch(prayerLogRepositoryProvider).getBetween(
+        DateTime(1970),
+        DateTime.now(),
+      );
+  final payments = await repo.getAllPayments();
+  final opening = await repo.getOpeningBalances();
+  final lateCountsAsQada =
+      await settings.getBool(SettingsKeys.lateCountsAsQada) ?? false;
+
+  return QadaBalance.compute(
+    logs: logs,
+    payments: payments,
+    openingBalances: opening,
+    lateCountsAsQada: lateCountsAsQada,
+  );
+});
+
+class _CountDialog extends StatefulWidget {
+  final String title;
+  final String label;
+  final int initial;
+  final bool allowZero;
+
+  const _CountDialog({
+    required this.title,
+    required this.label,
+    required this.initial,
+    this.allowZero = false,
+  });
+
+  @override
+  State<_CountDialog> createState() => _CountDialogState();
+}
+
+class _CountDialogState extends State<_CountDialog> {
+  late final _controller = TextEditingController(text: '${widget.initial}');
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        keyboardType: TextInputType.number,
+        autofocus: true,
+        decoration: InputDecoration(labelText: widget.label),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            final value = int.tryParse(_controller.text);
+            if (value == null) return;
+            if (value < 0 || (value == 0 && !widget.allowZero)) return;
+            Navigator.of(context).pop(value);
+          },
+          child: Text(l10n.save),
+        ),
+      ],
+    );
+  }
+}
