@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Coarse only (SRS FR-PT-03: "coarse is sufficient"); no background
+         location permission is requested (NFR-05). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="prayer_app"
         android:name="${applicationName}"
