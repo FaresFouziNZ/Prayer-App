@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/prayer_names.dart';
+import '../../../app/theme.dart';
 import '../../../domain/prayer_engine/prayer.dart';
 import '../../../domain/schedule/prayer_event.dart';
 import '../../../domain/tracker/prayer_log_entry.dart';
@@ -36,25 +37,41 @@ class TodayPrayerList extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final timeFormat = DateFormat.jm();
-    return Column(
-      children: events.map((event) {
-        final log = logsByPrayer[event.prayer];
-        final isJumuah = isFriday && event.prayer == Prayer.dhuhr;
-        final subtitleParts = [
-          l10n.adhanAtLabel(timeFormat.format(event.adhanAt)),
-          if (log?.note != null && log!.note!.isNotEmpty) log.note!,
-          if (log?.combinedWith != null)
-            l10n.combinedWithLabel(
-              PrayerNames.displayName(context, _parsePrayer(log!.combinedWith!)),
-            ),
-        ];
-        return ListTile(
-          title: Text(PrayerNames.displayName(context, event.prayer, isJumuah: isJumuah)),
-          subtitle: Text(subtitleParts.join(' · ')),
-          trailing: _StatusChip(status: log?.status),
-          onTap: () => _openLogSheet(context, event.prayer, log, isJumuah),
-        );
-      }).toList(),
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (final (index, event) in events.indexed) ...[
+            if (index > 0) Divider(height: 1, indent: 72, color: scheme.outlineVariant),
+            Builder(builder: (context) {
+              final log = logsByPrayer[event.prayer];
+              final isJumuah = isFriday && event.prayer == Prayer.dhuhr;
+              final subtitleParts = [
+                l10n.adhanAtLabel(timeFormat.format(event.adhanAt)),
+                if (log?.note != null && log!.note!.isNotEmpty) log.note!,
+                if (log?.combinedWith != null)
+                  l10n.combinedWithLabel(
+                    PrayerNames.displayName(context, _parsePrayer(log!.combinedWith!)),
+                  ),
+              ];
+              return ListTile(
+                shape: const RoundedRectangleBorder(),
+                leading: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: PrayerColors.containerOf(scheme, log?.status),
+                  foregroundColor: PrayerColors.onContainerOf(scheme, log?.status),
+                  child: Icon(PrayerColors.iconOf(log?.status), size: 22),
+                ),
+                title: Text(PrayerNames.displayName(context, event.prayer, isJumuah: isJumuah)),
+                subtitle: Text(subtitleParts.join(' · ')),
+                trailing: _StatusChip(status: log?.status),
+                onTap: () => _openLogSheet(context, event.prayer, log, isJumuah),
+              );
+            }),
+          ],
+        ],
+      ),
     );
   }
 
@@ -244,15 +261,27 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (status == null) {
-      return Chip(label: Text(l10n.statusNotLogged));
-    }
-    final label = switch (status!) {
+    final scheme = Theme.of(context).colorScheme;
+    final label = switch (status) {
+      null => l10n.statusNotLogged,
       PrayerStatus.jamaah => l10n.statusJamaah,
       PrayerStatus.onTimeAlone => l10n.statusOnTimeAlone,
       PrayerStatus.late => l10n.statusLate,
       PrayerStatus.missed => l10n.statusMissed,
     };
-    return Chip(label: Text(label));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: PrayerColors.containerOf(scheme, status),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: PrayerColors.onContainerOf(scheme, status),
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
   }
 }

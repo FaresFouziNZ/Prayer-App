@@ -41,6 +41,7 @@
   "windowClosesAtLabel": "Window closes at {time}",
   "@windowClosesAtLabel": { "placeholders": { "time": { "type": "String" } } },
   "closingSoonLabel": "Closing soon — log this prayer",
+  "nextPrayerLabel": "Next prayer",
   "adhanAtLabel": "Adhan {time}",
   "@adhanAtLabel": { "placeholders": { "time": { "type": "String" } } },
   "leaveByLabel": "Leave by {time}",

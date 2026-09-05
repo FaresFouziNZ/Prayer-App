@@ -38,6 +38,7 @@
   "iqamahAtLabel": "الإقامة في {time}",
   "windowClosesAtLabel": "ينتهي الوقت في {time}",
   "closingSoonLabel": "قارب الوقت على الانتهاء — سجّل هذه الصلاة",
+  "nextPrayerLabel": "الصلاة القادمة",
   "adhanAtLabel": "الأذان {time}",
   "leaveByLabel": "غادر بحلول {time}",
 
