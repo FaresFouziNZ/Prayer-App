@@ -122,12 +122,12 @@ Priority: **M** = must (MVP), **S** = should (v2), **C** = could (v3). Only M it
 | ID | Pri | Requirement |
 |---|---|---|
 | FR-IQ-01 | M | Iqamah time per prayer = adhan time + offset from the active iqamah profile. |
-| FR-IQ-02 | M | Profiles: **Normal** and **Ramadan** ship as editable defaults; the user may create **Custom** profiles. Values below are placeholders to be confirmed against the current Ministry circular before release. |
+| FR-IQ-02 | M | Profiles: **Normal** and **Ramadan** ship as editable defaults; the user may create **Custom** profiles. Default offsets are confirmed against the current Ministry circular (O1). |
 | FR-IQ-03 | M | Per-prayer override for a single "my mosque" that differs from the standard. |
 | FR-IQ-04 | M | Travel minutes and buffer minutes are user settings used by FR-NT-04 and the live surface. |
 | FR-IQ-05 | M | The active profile switches automatically when Ramadan mode is on, and back when it is off. |
 
-Default offsets (minutes after adhan) — **to be confirmed**:
+Default offsets (minutes after adhan) — confirmed against the current Ministry circular (O1):
 
 | Prayer | Normal | Ramadan |
 |---|---|---|
@@ -135,7 +135,7 @@ Default offsets (minutes after adhan) — **to be confirmed**:
 | Dhuhr | 20 | 15 |
 | Asr | 20 | 15 |
 | Maghrib | 10 | 10 |
-| Isha | 15 | 15 |
+| Isha | 20 | 15 |
 
 **Acceptance criteria**
 - AC-IQ-1: Changing a profile value updates the next iqamah time, the leave-by notification, the widget, and the published schedule.
@@ -320,7 +320,7 @@ Default offsets (minutes after adhan) — **to be confirmed**:
 
 | # | Item | Owner | Needed by |
 |---|---|---|---|
-| O1 | Confirm current Ministry iqamah offsets (Normal, Ramadan) | Fares | M3 |
+| O1 | ~~Confirm current Ministry iqamah offsets (Normal, Ramadan)~~ — resolved, see Decision log | Fares | M3 |
 | O2 | ~~Choose between `adhan_dart` and `adhan` after the 30-day validation (AC-PT-1)~~ — resolved, see Decision log | Fares | M1 |
 | O3 | Working title / app name | Fares | M0 |
 | O4 | Bundled adhan audio clip source and licence (≤30 s) | Fares | M1 |
@@ -342,3 +342,4 @@ Default offsets (minutes after adhan) — **to be confirmed**:
 | 2026-09-05 | Local storage: SQLite via Drift | Statistics are aggregate SQL queries. |
 | 2026-09-06 | O2 resolved: stick with `adhan_dart` | Already the client-side implementation; the AC-PT-1 30-day accuracy validation against published Umm al-Qura times is still outstanding and separate from this library choice. |
 | 2026-09-06 | Live surface starts at "live start" = adhan + 5 minutes, not at adhan itself, and stays visible through iqamah/window/closing until logged or window end | 5-minute grace period so it doesn't compete with the adhan notification; the live surface's whole point is to be an unmissable reminder, so it must not disappear on its own before the user acts. Spec-only for now — the live surface itself (FR-LA) still needs native Swift/Kotlin work not yet started. |
+| 2026-09-06 | O1 resolved: Normal profile's Isha offset corrected to 20 minutes (was 15); all other Normal/Ramadan offsets confirmed as-is | Verified by Fares against the current Ministry circular. |

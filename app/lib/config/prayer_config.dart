@@ -22,13 +22,13 @@ class PrayerConfig {
   static const int ramadanIshaAdjustmentMinutes = 30;
 
   /// Default iqamah offsets in minutes after adhan (SRS FR-IQ-02).
-  /// Marked "to be confirmed" against the current Ministry circular (O1).
+  /// Confirmed against the current Ministry circular (O1).
   static const Map<Prayer, int> normalIqamahOffsets = {
     Prayer.fajr: 25,
     Prayer.dhuhr: 20,
     Prayer.asr: 20,
     Prayer.maghrib: 10,
-    Prayer.isha: 15,
+    Prayer.isha: 20,
   };
 
   static const Map<Prayer, int> ramadanIqamahOffsets = {
