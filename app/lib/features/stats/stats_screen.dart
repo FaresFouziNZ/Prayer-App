@@ -1,0 +1,201 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../app/prayer_names.dart';
+import '../../app/providers.dart';
+import '../../app/sunnah_labels.dart';
+import '../../domain/prayer_engine/prayer.dart';
+import '../../domain/stats/period_stats.dart';
+import '../../domain/stats/streak.dart';
+import '../../domain/stats/sunnah_stats.dart';
+import '../../domain/tracker/prayer_log_entry.dart';
+import '../../domain/tracker/sunnah.dart';
+import '../../l10n/app_localizations.dart';
+
+/// SRS FR-ST: rates, per-prayer breakdown, sunnah completion, and streak
+/// for a selectable period.
+class StatsScreen extends ConsumerStatefulWidget {
+  const StatsScreen({super.key});
+
+  @override
+  ConsumerState<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends ConsumerState<StatsScreen> {
+  int? _periodDays = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final today = ref.watch(todayProvider);
+    final logsAsync = ref.watch(periodLogsProvider(_periodDays));
+    final sunnahAsync = ref.watch(periodSunnahProvider(_periodDays));
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.statsTitle)),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: SegmentedButton<int?>(
+              segments: [
+                ButtonSegment(value: 7, label: Text(l10n.period7d)),
+                ButtonSegment(value: 30, label: Text(l10n.period30d)),
+                ButtonSegment(value: 90, label: Text(l10n.period90d)),
+                ButtonSegment(value: null, label: Text(l10n.periodAll)),
+              ],
+              selected: {_periodDays},
+              onSelectionChanged: (selection) =>
+                  setState(() => _periodDays = selection.first),
+            ),
+          ),
+          Expanded(
+            child: logsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
+              data: (logs) => sunnahAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) =>
+                    Center(child: Text(l10n.errorLabel(error.toString()))),
+                data: (sunnahEntries) => _StatsBody(
+                  logs: logs,
+                  sunnahEntries: sunnahEntries,
+                  today: today,
+                  periodDays: _periodDays,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsBody extends StatelessWidget {
+  final List<PrayerLogEntry> logs;
+  final List<SunnahLogEntry> sunnahEntries;
+  final DateTime today;
+  final int? periodDays;
+
+  const _StatsBody({
+    required this.logs,
+    required this.sunnahEntries,
+    required this.today,
+    required this.periodDays,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final labels = sunnahLabels(l10n);
+    final start = periodDays != null
+        ? today.subtract(Duration(days: periodDays! - 1))
+        : (logs.isEmpty
+            ? today
+            : logs.map((l) => l.date).reduce((a, b) => a.isBefore(b) ? a : b));
+    final days = List.generate(
+      today.difference(start).inDays + 1,
+      (i) => start.add(Duration(days: i)),
+    );
+
+    final overall = PeriodStats.compute(days: days, logs: logs);
+    final perPrayer = PeriodStats.computePerPrayer(days: days, logs: logs);
+    final streak = Streak.compute(days: days, logs: logs);
+    final sunnahRates = SunnahStats.completionRate(days: days, entries: sunnahEntries);
+    final percent = NumberFormat.percentPattern();
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _MetricsCard(title: l10n.overallLabel, metrics: overall),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _StreakStat(label: l10n.currentStreakLabel, value: streak.current),
+                _StreakStat(label: l10n.bestStreakLabel, value: streak.best),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(l10n.perPrayerLabel, style: Theme.of(context).textTheme.titleMedium),
+        for (final prayer in Prayer.values)
+          _MetricsCard(
+            title: PrayerNames.displayName(context, prayer),
+            metrics: perPrayer[prayer]!,
+          ),
+        const SizedBox(height: 12),
+        Text(l10n.sunnahCompletionTitle, style: Theme.of(context).textTheme.titleMedium),
+        Card(
+          child: Column(
+            children: [
+              for (final item in SunnahItem.values)
+                ListTile(
+                  dense: true,
+                  title: Text(labels[item]!),
+                  trailing: Text(percent.format(sunnahRates[item] ?? 0)),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StreakStat extends StatelessWidget {
+  final String label;
+  final int value;
+
+  const _StreakStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('$value', style: Theme.of(context).textTheme.headlineMedium),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+class _MetricsCard extends StatelessWidget {
+  final String title;
+  final PeriodMetrics metrics;
+
+  const _MetricsCard({required this.title, required this.metrics});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final percent = NumberFormat.percentPattern();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Text(l10n.jamaahRateLabel(percent.format(metrics.jamaahRate))),
+            Text(l10n.onTimeRateLabel(percent.format(metrics.onTimeRate))),
+            Text(
+              l10n.lateMissedNotLoggedLabel(
+                metrics.lateCount,
+                metrics.missedCount,
+                metrics.notLoggedCount,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
