@@ -83,6 +83,8 @@
   "sunnahCompletionTitle": "Sunnah completion",
 
   "historyTitle": "History",
+  "todayLabel": "Today",
+  "yesterdayLabel": "Yesterday",
 
   "statsTitle": "Statistics",
   "period7d": "7d",
