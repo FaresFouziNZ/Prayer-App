@@ -36,26 +36,33 @@ class _QadaScreenState extends ConsumerState<QadaScreen> {
         data: (balances) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            ListTile(
-              title: Text(l10n.qadaPlanLabel),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.remove),
-                    onPressed: _targetPerDay > 1
-                        ? () => setState(() => _targetPerDay--)
-                        : null,
-                  ),
-                  Text('$_targetPerDay'),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () => setState(() => _targetPerDay++),
-                  ),
-                ],
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                  foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                  child: const Icon(Icons.flag_rounded),
+                ),
+                title: Text(l10n.qadaPlanLabel),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: _targetPerDay > 1
+                          ? () => setState(() => _targetPerDay--)
+                          : null,
+                    ),
+                    Text('$_targetPerDay', style: Theme.of(context).textTheme.titleMedium),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () => setState(() => _targetPerDay++),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const Divider(),
             for (final prayer in Prayer.values)
               _QadaTile(
                 prayer: prayer,
@@ -132,6 +139,12 @@ class _QadaTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final cleared = balance == 0;
+    final (container, onContainer) = cleared
+        ? (scheme.primaryContainer, scheme.onPrimaryContainer)
+        : (scheme.secondaryContainer, scheme.onSecondaryContainer);
+
     String? subtitle;
     if (balance > 0) {
       final plan = QadaPlan(
@@ -145,12 +158,23 @@ class _QadaTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: container,
+          foregroundColor: onContainer,
+          child: Icon(cleared ? Icons.check_rounded : Icons.balance_rounded),
+        ),
         title: Text(PrayerNames.displayName(context, prayer)),
         subtitle: subtitle == null ? null : Text(subtitle),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('$balance', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              '$balance',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: cleared ? scheme.onSurfaceVariant : scheme.secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
             IconButton(
               icon: const Icon(Icons.tune),
               tooltip: l10n.setOpeningBalanceTooltip,
