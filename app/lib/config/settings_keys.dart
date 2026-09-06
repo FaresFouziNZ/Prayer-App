@@ -32,4 +32,13 @@ class SettingsKeys {
 
   static const String dndDuringPrayer = 'dnd_during_prayer';
   static const String dndDurationMinutes = 'dnd_duration_minutes';
+
+  /// The date (Codecs.dateKey format) this install first ran. Written once,
+  /// in main(), and never rewritten — lets History tell "no data because
+  /// you hadn't installed the app yet" apart from "not logged".
+  static const String firstLaunchDate = 'first_launch_date';
+
+  /// Whether the user dismissed History's "days before you installed"
+  /// notice for the empty tail before [firstLaunchDate].
+  static const String historyPreInstallDismissed = 'history_pre_install_dismissed';
 }

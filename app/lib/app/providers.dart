@@ -5,6 +5,7 @@ import '../config/prayer_config.dart';
 import '../config/settings_keys.dart';
 import '../data/backup/backup_service.dart';
 import '../data/db/app_database.dart';
+import '../data/db/codecs.dart';
 import '../data/db/repositories/iqamah_profile_repository.dart';
 import '../data/db/repositories/prayer_log_repository.dart';
 import '../data/db/repositories/qada_repository.dart';
@@ -164,6 +165,22 @@ final dayLogsProvider = StreamProvider.family((ref, DateTime date) {
 final daySunnahProvider = StreamProvider.family((ref, DateTime date) {
   final repo = ref.watch(sunnahRepositoryProvider);
   return repo.watchForDay(date);
+});
+
+/// The date this install first ran, or null if never recorded (shouldn't
+/// happen post-launch — main() writes it before the first frame). Lets
+/// History tell "no data because the app didn't exist yet" apart from
+/// "not logged".
+final firstLaunchDateProvider = FutureProvider<DateTime?>((ref) async {
+  final settings = ref.watch(settingsRepositoryProvider);
+  final key = await settings.getString(SettingsKeys.firstLaunchDate);
+  return key == null ? null : Codecs.parseDateKey(key);
+});
+
+/// Whether the user dismissed History's "days before you installed" notice.
+final historyPreInstallDismissedProvider = FutureProvider<bool>((ref) async {
+  final settings = ref.watch(settingsRepositoryProvider);
+  return await settings.getBool(SettingsKeys.historyPreInstallDismissed) ?? false;
 });
 
 /// The last 30 days of logs, for the History screen's day list.

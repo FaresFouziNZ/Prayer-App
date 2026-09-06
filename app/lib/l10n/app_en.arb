@@ -25,6 +25,10 @@
   "save": "Save",
   "delete": "Delete",
   "create": "Create",
+  "dismiss": "Dismiss",
+
+  "historyPreInstallLabel": "{count} days before you installed the app",
+  "@historyPreInstallLabel": { "placeholders": { "count": { "type": "int" } } },
 
   "errorLabel": "Error: {error}",
   "@errorLabel": { "placeholders": { "error": { "type": "String" } } },

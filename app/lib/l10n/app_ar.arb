@@ -25,6 +25,9 @@
   "save": "حفظ",
   "delete": "حذف",
   "create": "إنشاء",
+  "dismiss": "إخفاء",
+
+  "historyPreInstallLabel": "{count} يومًا قبل تثبيت التطبيق",
 
   "errorLabel": "خطأ: {error}",
 
