@@ -32,115 +32,144 @@ class SettingsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
         data: (values) => ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            _SectionHeader(l10n.locationSectionLabel),
-            SegmentedButton<String>(
-              style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-              ),
-              segments: [
-                ButtonSegment(value: 'automatic', label: Text(l10n.automaticGpsLabel)),
-                ButtonSegment(value: 'manual', label: Text(l10n.manualLabel)),
+            _SettingsGroup(
+              icon: Icons.location_on_rounded,
+              title: l10n.locationSectionLabel,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: SegmentedButton<String>(
+                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    segments: [
+                      ButtonSegment(value: 'automatic', label: Text(l10n.automaticGpsLabel)),
+                      ButtonSegment(value: 'manual', label: Text(l10n.manualLabel)),
+                    ],
+                    selected: {values.locationMode},
+                    onSelectionChanged: (selection) =>
+                        _setString(ref, SettingsKeys.locationMode, selection.first),
+                  ),
+                ),
+                if (values.locationMode == 'automatic')
+                  ListTile(
+                    title: Text(l10n.useCurrentLocationLabel),
+                    subtitle: Text(values.locationLabel ?? l10n.noFixYetLabel),
+                    trailing: const Icon(Icons.my_location),
+                    onTap: () => _useCurrentLocation(context, ref),
+                  )
+                else
+                  _ManualLocationForm(
+                    latitude: values.latitude,
+                    longitude: values.longitude,
+                    label: values.locationLabel,
+                    onSave: (lat, lng, label) => _saveManualLocation(ref, lat, lng, label),
+                  ),
               ],
-              selected: {values.locationMode},
-              onSelectionChanged: (selection) =>
-                  _setString(ref, SettingsKeys.locationMode, selection.first),
             ),
-            const SizedBox(height: 8),
-            if (values.locationMode == 'automatic')
-              ListTile(
-                title: Text(l10n.useCurrentLocationLabel),
-                subtitle: Text(values.locationLabel ?? l10n.noFixYetLabel),
-                trailing: const Icon(Icons.my_location),
-                onTap: () => _useCurrentLocation(context, ref),
-              )
-            else
-              _ManualLocationForm(
-                latitude: values.latitude,
-                longitude: values.longitude,
-                label: values.locationLabel,
-                onSave: (lat, lng, label) => _saveManualLocation(ref, lat, lng, label),
-              ),
-            const Divider(),
-            _SectionHeader(l10n.prayerTimesSectionLabel),
-            SwitchListTile(
-              title: Text(l10n.ramadanModeLabel),
-              subtitle: Text(l10n.ramadanModeSubtitle),
-              value: values.ramadanMode,
-              onChanged: (value) => _setBool(ref, SettingsKeys.ramadanMode, value),
-            ),
-            profilesAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (error, stack) => Text(l10n.errorLabel(error.toString())),
-              data: (profiles) => Column(
-                children: [
-                  _ProfilePicker(
-                    label: l10n.normalProfileLabel,
-                    profiles: profiles,
-                    selectedId: values.normalProfileId,
-                    onChanged: (id) =>
-                        _setString(ref, SettingsKeys.normalIqamahProfileId, id),
+            const SizedBox(height: 16),
+            _SettingsGroup(
+              icon: Icons.mosque_rounded,
+              title: l10n.prayerTimesSectionLabel,
+              children: [
+                SwitchListTile(
+                  title: Text(l10n.ramadanModeLabel),
+                  subtitle: Text(l10n.ramadanModeSubtitle),
+                  value: values.ramadanMode,
+                  onChanged: (value) => _setBool(ref, SettingsKeys.ramadanMode, value),
+                ),
+                profilesAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (error, stack) => Text(l10n.errorLabel(error.toString())),
+                  data: (profiles) => Column(
+                    children: [
+                      _ProfilePicker(
+                        label: l10n.normalProfileLabel,
+                        profiles: profiles,
+                        selectedId: values.normalProfileId,
+                        onChanged: (id) =>
+                            _setString(ref, SettingsKeys.normalIqamahProfileId, id),
+                      ),
+                      _ProfilePicker(
+                        label: l10n.ramadanProfileLabel,
+                        profiles: profiles,
+                        selectedId: values.ramadanProfileId,
+                        onChanged: (id) =>
+                            _setString(ref, SettingsKeys.ramadanIqamahProfileId, id),
+                      ),
+                    ],
                   ),
-                  _ProfilePicker(
-                    label: l10n.ramadanProfileLabel,
-                    profiles: profiles,
-                    selectedId: values.ramadanProfileId,
-                    onChanged: (id) =>
-                        _setString(ref, SettingsKeys.ramadanIqamahProfileId, id),
+                ),
+                ListTile(
+                  title: Text(l10n.manageProfilesLabel),
+                  subtitle: Text(l10n.manageProfilesSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const IqamahProfilesScreen()),
                   ),
-                ],
-              ),
+                ),
+                _StepperTile(
+                  title: l10n.closingOffsetLabel,
+                  value: values.closingOffsetMinutes,
+                  onChanged: (v) => _setInt(ref, SettingsKeys.closingOffsetMinutes, v),
+                ),
+              ],
             ),
-            ListTile(
-              title: Text(l10n.manageProfilesLabel),
-              subtitle: Text(l10n.manageProfilesSubtitle),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const IqamahProfilesScreen()),
-              ),
+            const SizedBox(height: 16),
+            _SettingsGroup(
+              icon: Icons.notifications_rounded,
+              title: l10n.notificationsSectionLabel,
+              children: const [NotificationSettingsSection()],
             ),
-            _StepperTile(
-              title: l10n.closingOffsetLabel,
-              value: values.closingOffsetMinutes,
-              onChanged: (v) => _setInt(ref, SettingsKeys.closingOffsetMinutes, v),
+            const SizedBox(height: 16),
+            _SettingsGroup(
+              icon: Icons.balance_rounded,
+              title: l10n.qadaSectionLabel,
+              children: [
+                SwitchListTile(
+                  title: Text(l10n.lateCountsAsQadaLabel),
+                  value: values.lateCountsAsQada,
+                  onChanged: (value) => _setBool(ref, SettingsKeys.lateCountsAsQada, value),
+                ),
+              ],
             ),
-            const Divider(),
-            _SectionHeader(l10n.notificationsSectionLabel),
-            const NotificationSettingsSection(),
-            const Divider(),
-            _SectionHeader(l10n.qadaSectionLabel),
-            SwitchListTile(
-              title: Text(l10n.lateCountsAsQadaLabel),
-              value: values.lateCountsAsQada,
-              onChanged: (value) => _setBool(ref, SettingsKeys.lateCountsAsQada, value),
+            const SizedBox(height: 16),
+            _SettingsGroup(
+              icon: Icons.palette_rounded,
+              title: l10n.appearanceSectionLabel,
+              children: [
+                ListTile(
+                  title: Text(l10n.languageLabel),
+                  trailing: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'en', label: Text('English')),
+                      ButtonSegment(value: 'ar', label: Text('العربية')),
+                    ],
+                    selected: {values.languageCode},
+                    onSelectionChanged: (selection) =>
+                        _setString(ref, SettingsKeys.languageCode, selection.first),
+                  ),
+                ),
+              ],
             ),
-            const Divider(),
-            _SectionHeader(l10n.appearanceSectionLabel),
-            ListTile(
-              title: Text(l10n.languageLabel),
-              trailing: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'en', label: Text('English')),
-                  ButtonSegment(value: 'ar', label: Text('العربية')),
-                ],
-                selected: {values.languageCode},
-                onSelectionChanged: (selection) =>
-                    _setString(ref, SettingsKeys.languageCode, selection.first),
-              ),
-            ),
-            const Divider(),
-            _SectionHeader(l10n.backupSectionLabel),
-            ListTile(
-              title: Text(l10n.exportBackupLabel),
-              subtitle: Text(l10n.exportBackupSubtitle),
-              trailing: const Icon(Icons.ios_share),
-              onTap: () => _export(ref, l10n),
-            ),
-            ListTile(
-              title: Text(l10n.importBackupLabel),
-              subtitle: Text(l10n.importBackupSubtitle),
-              trailing: const Icon(Icons.file_open),
-              onTap: () => _import(context, ref, l10n),
+            const SizedBox(height: 16),
+            _SettingsGroup(
+              icon: Icons.cloud_outlined,
+              title: l10n.backupSectionLabel,
+              children: [
+                ListTile(
+                  title: Text(l10n.exportBackupLabel),
+                  subtitle: Text(l10n.exportBackupSubtitle),
+                  trailing: const Icon(Icons.ios_share),
+                  onTap: () => _export(ref, l10n),
+                ),
+                ListTile(
+                  title: Text(l10n.importBackupLabel),
+                  subtitle: Text(l10n.importBackupSubtitle),
+                  trailing: const Icon(Icons.file_open),
+                  onTap: () => _import(context, ref, l10n),
+                ),
+              ],
             ),
           ],
         ),
@@ -254,22 +283,46 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
+/// One grouped settings section: an icon+title header above a card that
+/// holds its rows, matching the card language used across Home/Stats/Qada.
+class _SettingsGroup extends StatelessWidget {
+  final IconData icon;
   final String title;
+  final List<Widget> children;
 
-  const _SectionHeader(this.title);
+  const _SettingsGroup({
+    required this.icon,
+    required this.title,
+    required this.children,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: Theme.of(context)
-            .textTheme
-            .labelLarge
-            ?.copyWith(color: Theme.of(context).colorScheme.primary),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: scheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: scheme.primary),
+              ),
+            ],
+          ),
+        ),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: children),
+        ),
+      ],
     );
   }
 }
