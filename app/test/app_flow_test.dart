@@ -212,6 +212,32 @@ void main() {
     }
   });
 
+  testWidgets('collapsing the Sunnah checklist hides its items and persists',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    try {
+      await tester.pumpWidget(buildApp());
+      await _settle(tester);
+
+      expect(find.widgetWithText(CheckboxListTile, 'Witr'), findsOneWidget);
+
+      await tester.tap(find.text('Sunnah'));
+      await _settle(tester);
+
+      expect(find.widgetWithText(CheckboxListTile, 'Witr'), findsNothing);
+      expect(
+        await SettingsRepository(db).getBool(SettingsKeys.sunnahChecklistCollapsed),
+        isTrue,
+      );
+    } finally {
+      await _disposeCleanly(tester);
+    }
+  });
+
   testWidgets('history, stats, and qada tabs render without crashing',
       (tester) async {
     try {

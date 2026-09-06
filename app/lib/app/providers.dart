@@ -183,6 +183,13 @@ final historyPreInstallDismissedProvider = FutureProvider<bool>((ref) async {
   return await settings.getBool(SettingsKeys.historyPreInstallDismissed) ?? false;
 });
 
+/// Whether the Home screen's Sunnah checklist is collapsed (SRS FR-SN-01/02
+/// are optional, so the toggles can be tucked away without losing them).
+final sunnahChecklistCollapsedProvider = FutureProvider<bool>((ref) async {
+  final settings = ref.watch(settingsRepositoryProvider);
+  return await settings.getBool(SettingsKeys.sunnahChecklistCollapsed) ?? false;
+});
+
 /// The last 30 days of logs, for the History screen's day list.
 const int historyWindowDays = 30;
 

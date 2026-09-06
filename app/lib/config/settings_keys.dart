@@ -45,4 +45,8 @@ class SettingsKeys {
   /// Whether the user dismissed History's "days before you installed"
   /// notice for the empty tail before [firstLaunchDate].
   static const String historyPreInstallDismissed = 'history_pre_install_dismissed';
+
+  /// Whether the Home screen's Sunnah checklist is collapsed (SRS FR-SN —
+  /// optional, so it can be tucked away without losing the toggles).
+  static const String sunnahChecklistCollapsed = 'sunnah_checklist_collapsed';
 }
