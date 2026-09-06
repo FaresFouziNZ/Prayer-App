@@ -262,6 +262,36 @@ void main() {
     }
   });
 
+  testWidgets(
+      'Stats reflects a prayer logged after the Stats tab was already open',
+      (tester) async {
+    try {
+      await tester.pumpWidget(buildApp());
+      await _settle(tester);
+
+      // Visit Stats first — regression test for a bug where its data
+      // provider was a one-shot fetch that never picked up later edits.
+      await tester.tap(find.byIcon(Icons.bar_chart));
+      await _settle(tester);
+      expect(find.textContaining("Jama'ah rate: 100%"), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.mosque_outlined));
+      await _settle(tester);
+      await tester.tap(_prayerRow(_fajr));
+      await _settle(tester);
+      await tester.tap(find.text('Jama\'ah').last);
+      await _settle(tester);
+      await tester.tap(find.text('Save'));
+      await _settle(tester);
+
+      await tester.tap(find.byIcon(Icons.bar_chart));
+      await _settle(tester);
+      expect(find.textContaining("Jama'ah rate: 100%"), findsWidgets);
+    } finally {
+      await _disposeCleanly(tester);
+    }
+  });
+
   testWidgets('toggling Ramadan mode in settings persists to the database',
       (tester) async {
     try {

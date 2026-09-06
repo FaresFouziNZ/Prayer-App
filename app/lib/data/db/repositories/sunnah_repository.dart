@@ -45,6 +45,12 @@ class SunnahRepository {
         .map((rows) => rows.map(_toDomain).toList());
   }
 
+  Stream<List<SunnahLogEntry>> watchAll() {
+    return _db.select(_db.sunnahLogTable).watch().map(
+          (rows) => rows.map(_toDomain).toList(),
+        );
+  }
+
   SunnahLogEntry _toDomain(SunnahLogRow row) {
     return SunnahLogEntry(
       date: Codecs.parseDateKey(row.date),

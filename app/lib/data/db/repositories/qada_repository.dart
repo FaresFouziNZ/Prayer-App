@@ -40,17 +40,23 @@ class QadaRepository {
 
   Future<List<QadaPayment>> getAllPayments() async {
     final rows = await _db.select(_db.qadaPaymentTable).get();
-    return rows
-        .map((row) => QadaPayment(
-              id: row.id,
-              prayer: Codecs.prayerFromDb(row.prayer),
-              count: row.count,
-              date: Codecs.parseDateKey(row.date),
-              loggedAt: DateTime.parse(row.loggedAt),
-              note: row.note,
-            ))
-        .toList();
+    return rows.map(_paymentFromRow).toList();
   }
+
+  Stream<List<QadaPayment>> watchAllPayments() {
+    return _db.select(_db.qadaPaymentTable).watch().map(
+          (rows) => rows.map(_paymentFromRow).toList(),
+        );
+  }
+
+  QadaPayment _paymentFromRow(QadaPaymentRow row) => QadaPayment(
+        id: row.id,
+        prayer: Codecs.prayerFromDb(row.prayer),
+        count: row.count,
+        date: Codecs.parseDateKey(row.date),
+        loggedAt: DateTime.parse(row.loggedAt),
+        note: row.note,
+      );
 
   Future<void> setOpeningBalance(Prayer prayer, int count) {
     return _db.into(_db.qadaOpeningBalanceTable).insertOnConflictUpdate(
@@ -66,5 +72,13 @@ class QadaRepository {
     return {
       for (final row in rows) Codecs.prayerFromDb(row.prayer): row.count,
     };
+  }
+
+  Stream<Map<Prayer, int>> watchOpeningBalances() {
+    return _db.select(_db.qadaOpeningBalanceTable).watch().map(
+          (rows) => {
+            for (final row in rows) Codecs.prayerFromDb(row.prayer): row.count,
+          },
+        );
   }
 }

@@ -201,16 +201,18 @@ final historyLogsProvider = StreamProvider<List<PrayerLogEntry>>((ref) {
 });
 
 /// Logs for a statistics period. `periodDays == null` means "all time",
-/// starting from the earliest logged date (SRS FR-ST-01).
+/// starting from the earliest logged date (SRS FR-ST-01). A [StreamProvider]
+/// (not a one-shot [FutureProvider]) so Stats picks up edits made after the
+/// screen was first opened, instead of showing whatever was true the first
+/// time this period was viewed.
 final periodLogsProvider =
-    FutureProvider.family<List<PrayerLogEntry>, int?>((ref, periodDays) async {
+    StreamProvider.family<List<PrayerLogEntry>, int?>((ref, periodDays) {
   final repo = ref.watch(prayerLogRepositoryProvider);
   final today = ref.watch(todayProvider);
-  if (periodDays != null) {
-    final start = today.subtract(Duration(days: periodDays - 1));
-    return repo.getBetween(start, today);
-  }
-  return repo.getBetween(DateTime(1970), today);
+  final start = periodDays == null
+      ? DateTime(1970)
+      : today.subtract(Duration(days: periodDays - 1));
+  return repo.watchBetween(start, today);
 });
 
 /// All iqamah profiles (built-in and custom), for the profile editor and
@@ -219,16 +221,18 @@ final iqamahProfilesProvider = FutureProvider<List<IqamahProfile>>((ref) {
   return ref.watch(iqamahProfileRepositoryProvider).getAll();
 });
 
-/// Sunnah entries for the same statistics period (SRS FR-ST-04).
+/// Sunnah entries for the same statistics period (SRS FR-ST-04). A
+/// [StreamProvider] for the same reason as [periodLogsProvider] — Stats
+/// should reflect a toggle made after the screen was first opened.
 final periodSunnahProvider =
-    FutureProvider.family<List<SunnahLogEntry>, int?>((ref, periodDays) async {
+    StreamProvider.family<List<SunnahLogEntry>, int?>((ref, periodDays) {
   final repo = ref.watch(sunnahRepositoryProvider);
-  final all = await repo.getAll();
-  if (periodDays == null) return all;
-  final today = ref.watch(todayProvider);
-  final start = today.subtract(Duration(days: periodDays - 1));
-  return all
-      .where((e) =>
-          !e.date.isBefore(start) && !e.date.isAfter(today))
-      .toList();
+  return repo.watchAll().map((all) {
+    if (periodDays == null) return all;
+    final today = ref.watch(todayProvider);
+    final start = today.subtract(Duration(days: periodDays - 1));
+    return all
+        .where((e) => !e.date.isBefore(start) && !e.date.isAfter(today))
+        .toList();
+  });
 });

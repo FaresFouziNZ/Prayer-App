@@ -48,4 +48,7 @@ class SettingsRepository {
         .watchSingleOrNull()
         .map((row) => row?.value);
   }
+
+  Stream<bool?> watchBool(String key) =>
+      watchString(key).map((value) => value == null ? null : value == 'true');
 }

@@ -7,7 +7,9 @@ import '../../app/providers.dart';
 import '../../config/settings_keys.dart';
 import '../../domain/prayer_engine/prayer.dart';
 import '../../domain/qada/qada_balance.dart';
+import '../../domain/qada/qada_payment.dart';
 import '../../domain/qada/qada_plan.dart';
+import '../../domain/tracker/prayer_log_entry.dart';
 import '../../l10n/app_localizations.dart';
 
 /// SRS FR-QD: balances derived from missed records, payments, and an
@@ -26,54 +28,50 @@ class _QadaScreenState extends ConsumerState<QadaScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final balancesAsync = ref.watch(_qadaBalancesProvider);
+    final balances = ref.watch(_qadaBalancesProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.qadaTitle)),
-      body: balancesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
-        data: (balances) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                  foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                  child: const Icon(Icons.flag_rounded),
-                ),
-                title: Text(l10n.qadaPlanLabel),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove),
-                      onPressed: _targetPerDay > 1
-                          ? () => setState(() => _targetPerDay--)
-                          : null,
-                    ),
-                    Text('$_targetPerDay', style: Theme.of(context).textTheme.titleMedium),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () => setState(() => _targetPerDay++),
-                    ),
-                  ],
-                ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                child: const Icon(Icons.flag_rounded),
+              ),
+              title: Text(l10n.qadaPlanLabel),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: _targetPerDay > 1
+                        ? () => setState(() => _targetPerDay--)
+                        : null,
+                  ),
+                  Text('$_targetPerDay', style: Theme.of(context).textTheme.titleMedium),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => setState(() => _targetPerDay++),
+                  ),
+                ],
               ),
             ),
-            for (final prayer in Prayer.values)
-              _QadaTile(
-                prayer: prayer,
-                balance: balances[prayer] ?? 0,
-                targetPerDay: _targetPerDay,
-                onRecordPayment: () => _recordPayment(context, ref, prayer),
-                onSetOpeningBalance: () =>
-                    _setOpeningBalance(context, ref, prayer, balances[prayer] ?? 0),
-              ),
-          ],
-        ),
+          ),
+          for (final prayer in Prayer.values)
+            _QadaTile(
+              prayer: prayer,
+              balance: balances[prayer] ?? 0,
+              targetPerDay: _targetPerDay,
+              onRecordPayment: () => _recordPayment(context, ref, prayer),
+              onSetOpeningBalance: () =>
+                  _setOpeningBalance(context, ref, prayer, balances[prayer] ?? 0),
+            ),
+        ],
       ),
     );
   }
@@ -188,23 +186,38 @@ class _QadaTile extends StatelessWidget {
   }
 }
 
-final _qadaBalancesProvider = FutureProvider<Map<Prayer, int>>((ref) async {
-  final repo = ref.watch(qadaRepositoryProvider);
-  final settings = ref.watch(settingsRepositoryProvider);
-  final logs = await ref.watch(prayerLogRepositoryProvider).getBetween(
+/// Reactive sources feeding [_qadaBalancesProvider] — [StreamProvider]s
+/// (not one-shot futures) so the balance recomputes as soon as a prayer is
+/// (re)logged, a payment is recorded, or an opening balance changes,
+/// instead of only reflecting whatever was true when Qada was first opened.
+final _qadaLogsProvider = StreamProvider<List<PrayerLogEntry>>((ref) {
+  return ref.watch(prayerLogRepositoryProvider).watchBetween(
         DateTime(1970),
         DateTime.now(),
       );
-  final payments = await repo.getAllPayments();
-  final opening = await repo.getOpeningBalances();
-  final lateCountsAsQada =
-      await settings.getBool(SettingsKeys.lateCountsAsQada) ?? false;
+});
 
+final _qadaPaymentsProvider = StreamProvider<List<QadaPayment>>((ref) {
+  return ref.watch(qadaRepositoryProvider).watchAllPayments();
+});
+
+final _qadaOpeningBalancesProvider = StreamProvider<Map<Prayer, int>>((ref) {
+  return ref.watch(qadaRepositoryProvider).watchOpeningBalances();
+});
+
+final _lateCountsAsQadaProvider = StreamProvider<bool>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watchBool(SettingsKeys.lateCountsAsQada)
+      .map((value) => value ?? false);
+});
+
+final _qadaBalancesProvider = Provider<Map<Prayer, int>>((ref) {
   return QadaBalance.compute(
-    logs: logs,
-    payments: payments,
-    openingBalances: opening,
-    lateCountsAsQada: lateCountsAsQada,
+    logs: ref.watch(_qadaLogsProvider).value ?? const [],
+    payments: ref.watch(_qadaPaymentsProvider).value ?? const [],
+    openingBalances: ref.watch(_qadaOpeningBalancesProvider).value ?? const {},
+    lateCountsAsQada: ref.watch(_lateCountsAsQadaProvider).value ?? false,
   );
 });
 
