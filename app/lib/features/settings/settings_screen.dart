@@ -477,7 +477,7 @@ final _settingsValuesProvider = FutureProvider<_SettingsValues>((ref) async {
             PrayerConfig.defaultClosingOffsetMinutes,
     lateCountsAsQada:
         await settings.getBool(SettingsKeys.lateCountsAsQada) ?? false,
-    languageCode: await settings.getString(SettingsKeys.languageCode) ?? 'en',
+    languageCode: await settings.getString(SettingsKeys.languageCode) ?? 'ar',
   );
 });
 

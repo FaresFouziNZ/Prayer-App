@@ -34,7 +34,7 @@ class NotificationCoordinator {
         ),
     };
 
-    final languageCode = await settings.getString(SettingsKeys.languageCode) ?? 'en';
+    final languageCode = await settings.getString(SettingsKeys.languageCode) ?? 'ar';
     final l10n = lookupAppLocalizations(Locale(languageCode));
     final isArabicLocale = languageCode == 'ar';
 

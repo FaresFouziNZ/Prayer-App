@@ -75,7 +75,7 @@ class _PrayerAppState extends ConsumerState<PrayerApp> with WidgetsBindingObserv
 final _languageCodeProvider = StreamProvider<String>((ref) {
   final settings = ref.watch(settingsRepositoryProvider);
   return settings.watchString(SettingsKeys.languageCode).map((code) {
-    final resolved = code ?? 'en';
+    final resolved = code ?? 'ar';
     intl.Intl.defaultLocale = resolved;
     return resolved;
   });

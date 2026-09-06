@@ -67,6 +67,11 @@ void main() {
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     await seedDefaultIqamahProfiles(IqamahProfileRepository(db));
+    // The app defaults to Arabic (see SettingsKeys.languageCode's fallback),
+    // but most of these tests assert against the bilingual name constants
+    // below (FR-UI-03's transliteration, only shown outside Arabic) — pin
+    // English here so only the dedicated Arabic test needs to opt in.
+    await SettingsRepository(db).setString(SettingsKeys.languageCode, 'en');
     // appRouter is a module-level singleton, so its current location and
     // "loaded branches" state (StatefulShellRoute branches build lazily)
     // would otherwise leak between tests — always start each test at Home.
