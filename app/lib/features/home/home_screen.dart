@@ -22,6 +22,7 @@ class HomeScreen extends ConsumerWidget {
     final today = ref.watch(todayProvider);
     final snapshotAsync = ref.watch(daySnapshotProvider(today));
     final logsAsync = ref.watch(dayLogsProvider(today));
+    final isArabicLocale = Localizations.localeOf(context).languageCode == 'ar';
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.homeTitle)),
@@ -34,6 +35,9 @@ class HomeScreen extends ConsumerWidget {
             (event) => event.endAt.isAfter(now),
             orElse: () => snapshot.events.last,
           );
+          final hijri = snapshot.hijriDate;
+          final dateLine = '${DateFormat.MMMEd().format(today)} · '
+              '${hijri.day} ${hijri.longMonthName(arabic: isArabicLocale)} ${hijri.year}';
 
           return logsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -45,6 +49,15 @@ class HomeScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        dateLine,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ),
                     if (snapshot.suggestRamadanMode)
                       _RamadanSuggestionCard(
                         onEnable: () async {
@@ -103,10 +116,16 @@ class _RamadanSuggestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
-      color: Theme.of(context).colorScheme.secondaryContainer,
+      margin: const EdgeInsets.only(bottom: 12),
+      color: scheme.secondaryContainer,
       child: ListTile(
-        leading: const Icon(Icons.nightlight_outlined),
+        leading: CircleAvatar(
+          backgroundColor: scheme.secondary,
+          foregroundColor: scheme.onSecondary,
+          child: const Icon(Icons.nightlight_rounded, size: 20),
+        ),
         title: Text(l10n.ramadanBannerTitle),
         subtitle: Text(l10n.ramadanBannerSubtitle),
         trailing: FilledButton(onPressed: onEnable, child: Text(l10n.enable)),
@@ -135,8 +154,16 @@ class _ImsakIftarCard extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _TimeStat(label: l10n.imsakLabel, time: timeFormat.format(imsak)),
-            _TimeStat(label: l10n.iftarLabel, time: timeFormat.format(iftar)),
+            _TimeStat(
+              icon: Icons.dark_mode_rounded,
+              label: l10n.imsakLabel,
+              time: timeFormat.format(imsak),
+            ),
+            _TimeStat(
+              icon: Icons.wb_twilight_rounded,
+              label: l10n.iftarLabel,
+              time: timeFormat.format(iftar),
+            ),
           ],
         ),
       ),
@@ -145,17 +172,27 @@ class _ImsakIftarCard extends StatelessWidget {
 }
 
 class _TimeStat extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String time;
 
-  const _TimeStat({required this.label, required this.time});
+  const _TimeStat({required this.icon, required this.label, required this.time});
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
+        Icon(icon, size: 20, color: scheme.primary),
+        const SizedBox(height: 4),
         Text(time, style: Theme.of(context).textTheme.titleMedium),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          label,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: scheme.onSurfaceVariant),
+        ),
       ],
     );
   }

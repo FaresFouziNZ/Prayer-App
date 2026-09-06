@@ -64,6 +64,7 @@
   "noteOptionalLabel": "ملاحظة (اختياري)",
 
   "sunnahTitle": "السنن",
+  "sunnahProgressLabel": "{done} من {total}",
   "sunnahFajrBefore": "الفجر — ركعتان قبلية",
   "sunnahDhuhrBefore": "الظهر — أربع ركعات قبلية",
   "sunnahDhuhrAfter": "الظهر — ركعتان بعدية",

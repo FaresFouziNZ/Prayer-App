@@ -74,6 +74,8 @@
   "noteOptionalLabel": "Note (optional)",
 
   "sunnahTitle": "Sunnah",
+  "sunnahProgressLabel": "{done} of {total}",
+  "@sunnahProgressLabel": { "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } } },
   "sunnahFajrBefore": "Fajr — 2 before",
   "sunnahDhuhrBefore": "Dhuhr — 4 before",
   "sunnahDhuhrAfter": "Dhuhr — 2 after",

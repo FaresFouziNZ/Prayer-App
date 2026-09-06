@@ -24,6 +24,8 @@ class SunnahChecklist extends ConsumerWidget {
       error: (error, stack) => Text(l10n.errorLabel(error.toString())),
       data: (entries) {
         final doneByItem = {for (final e in entries) e.item: e.done};
+        final doneCount = doneByItem.values.where((done) => done).length;
+        final scheme = Theme.of(context).colorScheme;
         return Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -32,8 +34,25 @@ class SunnahChecklist extends ConsumerWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Text(l10n.sunnahTitle,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  child: Row(
+                    children: [
+                      Icon(Icons.nights_stay_rounded, size: 18, color: scheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.sunnahTitle,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      Text(
+                        l10n.sunnahProgressLabel(doneCount, SunnahItem.values.length),
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
                 for (final item in SunnahItem.values)
                   CheckboxListTile(
