@@ -39,10 +39,6 @@ class PrayerConfig {
     Prayer.isha: 15,
   };
 
-  /// Default leave-by settings (SRS FR-IQ-04).
-  static const int defaultTravelMinutes = 10;
-  static const int defaultBufferMinutes = 5;
-
   /// Default window-closing reminder offset (SRS FR-NT-05, open item O5).
   static const int defaultClosingOffsetMinutes = 30;
 

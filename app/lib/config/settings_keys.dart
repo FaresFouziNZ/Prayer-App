@@ -16,8 +16,6 @@ class SettingsKeys {
   static const String ramadanIqamahProfileId = 'ramadan_iqamah_profile_id';
 
   static const String ramadanMode = 'ramadan_mode';
-  static const String travelMinutes = 'travel_minutes';
-  static const String bufferMinutes = 'buffer_minutes';
   static const String closingOffsetMinutes = 'closing_offset_minutes';
   static const String preAdhanOffsetMinutes = 'pre_adhan_offset_minutes';
   static const String lateCountsAsQada = 'late_counts_as_qada';

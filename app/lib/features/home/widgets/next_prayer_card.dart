@@ -114,12 +114,6 @@ class _NextPrayerCardState extends State<NextPrayerCard> {
                 _CountdownDigits(remaining: remaining, color: onContainer),
                 const SizedBox(height: 16),
                 _InfoRow(icon: Icons.notifications_active_rounded, label: phaseLabel, color: onContainer),
-                const SizedBox(height: 6),
-                _InfoRow(
-                  icon: Icons.directions_walk_rounded,
-                  label: l10n.leaveByLabel(timeFormat.format(event.leaveByAt)),
-                  color: onContainer,
-                ),
               ],
             ),
           ),

@@ -10,7 +10,6 @@ class PrayerEvent {
   final DateTime preAdhanAt;
   final DateTime adhanAt;
   final DateTime iqamahAt;
-  final DateTime leaveByAt;
   final DateTime closingAt;
   final DateTime endAt;
 
@@ -20,7 +19,6 @@ class PrayerEvent {
     required this.preAdhanAt,
     required this.adhanAt,
     required this.iqamahAt,
-    required this.leaveByAt,
     required this.closingAt,
     required this.endAt,
   });

@@ -3,8 +3,7 @@
 Per SRS FR-SY and 02-Architecture.md §3, this module would hold:
 
 - `DeviceDoc` repository: anonymous auth, publishing FCM/push-to-start/activity
-  tokens, calculation params, iqamah profile, Ramadan mode, travel/buffer
-  minutes to `devices/{id}`.
+  tokens, calculation params, iqamah profile, Ramadan mode to `devices/{id}`.
 - Schedule publisher: writes the app's computed `PrayerEvent`s to
   `devices/{id}/schedule/{date}` for the next 30 days.
 

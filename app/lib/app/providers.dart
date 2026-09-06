@@ -123,10 +123,6 @@ final daySnapshotProvider =
         isBuiltin: true,
       );
 
-  final travelMinutes = await settings.getInt(SettingsKeys.travelMinutes) ??
-      PrayerConfig.defaultTravelMinutes;
-  final bufferMinutes = await settings.getInt(SettingsKeys.bufferMinutes) ??
-      PrayerConfig.defaultBufferMinutes;
   final closingOffsetMinutes =
       await settings.getInt(SettingsKeys.closingOffsetMinutes) ??
           PrayerConfig.defaultClosingOffsetMinutes;
@@ -143,8 +139,6 @@ final daySnapshotProvider =
     prayerDay,
     activeProfile,
     ScheduleSettings(
-      travelMinutes: travelMinutes,
-      bufferMinutes: bufferMinutes,
       closingOffsetMinutes: closingOffsetMinutes,
       preAdhanOffsetMinutes: preAdhanOffsetMinutes,
     ),

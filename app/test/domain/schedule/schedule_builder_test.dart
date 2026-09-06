@@ -31,8 +31,6 @@ void main() {
   );
 
   const settings = ScheduleSettings(
-    travelMinutes: 10,
-    bufferMinutes: 5,
     closingOffsetMinutes: 30,
     preAdhanOffsetMinutes: 10,
   );
@@ -49,16 +47,6 @@ void main() {
     final dhuhr = events.firstWhere((e) => e.prayer == Prayer.dhuhr);
 
     expect(dhuhr.iqamahAt, day.adhanAt(Prayer.dhuhr).add(const Duration(minutes: 20)));
-  });
-
-  test('leave-by is iqamah minus travel minus buffer (definitions §1.4)', () {
-    final events = ScheduleBuilder.build(day, profile, settings);
-    final asr = events.firstWhere((e) => e.prayer == Prayer.asr);
-
-    expect(
-      asr.leaveByAt,
-      asr.iqamahAt.subtract(const Duration(minutes: 15)),
-    );
   });
 
   test('closing is the window end minus the closing offset (FR-NT-05)', () {

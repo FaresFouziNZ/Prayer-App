@@ -127,7 +127,7 @@ class IqamahProfile {
 
 class PrayerEvent {          // one row per prayer per day, consumed by every surface
   final Prayer prayer; final DateTime date;
-  final DateTime adhanAt, liveStartAt, iqamahAt, leaveByAt, closingAt, endAt;
+  final DateTime adhanAt, liveStartAt, iqamahAt, closingAt, endAt;
   // liveStartAt = adhanAt + 5 min (SRS "Live start", FR-LA-01/03/07): when the
   // live countdown surface first appears, kept distinct from adhanAt so it
   // doesn't compete with the plain adhan notification (FR-NT-01).
@@ -219,7 +219,7 @@ Streak rule (in Dart, over daily aggregates): a day counts toward the streak onl
 
 ### 2.6 Notification design
 
-**Event set per prayer** (from `PrayerEvent`): pre-adhan (optional), adhan, leave-by, closing (only if unlogged), end prompt (only if unlogged).
+**Event set per prayer** (from `PrayerEvent`): pre-adhan (optional), adhan, closing (only if unlogged), end prompt (only if unlogged).
 
 **iOS**
 - `UNUserNotificationCenter`, category with actions `LOG_JAMAAH`, `LOG_ALONE`, `NOT_YET`.
@@ -248,7 +248,6 @@ Streak rule (in Dart, over daily aggregates): a day counts toward the streak onl
   "iqamahAt": 1757076600,
   "closingAt": 1757087400,
   "endAt": 1757089200,
-  "leaveByAt": 1757075700,
   "logged": false
 }
 ```
@@ -261,7 +260,7 @@ Phase changes are pushed (iOS) or alarm-driven (Android), but every phase's view
 |---|---|
 | Attributes (static) | `prayer`, `date` |
 | ContentState (dynamic) | `phase`, timestamps, `logged` |
-| Lock screen / expanded | Prayer name (Arabic + transliteration), phase label, `Text(timerInterval:)` to `iqamahAt` (phase iqamah) or `endAt` (window/closing), secondary line "leave by HH:mm" in iqamah phase. Closing phase: red tint + three buttons. |
+| Lock screen / expanded | Prayer name (Arabic + transliteration), phase label, `Text(timerInterval:)` to `iqamahAt` (phase iqamah) or `endAt` (window/closing). Closing phase: red tint + three buttons. |
 | Compact Dynamic Island | leading: prayer glyph; trailing: timer. |
 | Minimal | timer only. |
 | Buttons | `LogPrayerIntent(prayer, date, status)` — `LiveActivityIntent`, runs in-process, writes via Drift (through a small Swift→Dart channel *or* directly to the SQLite file using shared App Group path — **decision at M5**; the direct-SQLite route avoids launching Dart but duplicates the write rule). Ends the activity after logging. |
@@ -304,14 +303,12 @@ devices/{deviceId}                       // deviceId == Firebase Auth uid (anony
   calc:            { method: "umm_al_qura", madhab: "shafi", adjustments: {isha: 0} }
   iqamah:          { profileId, offsets: {...}, mosqueOverride: {...}|null }
   ramadanMode:     bool
-  travelMinutes:   int
-  bufferMinutes:   int
   closingOffsetMin:int
   tokens:          { fcm, pushToStart, activity: { token, prayer, date } | null }
   updatedAt:       timestamp
 
 devices/{deviceId}/schedule/{YYYY-MM-DD}  // published by the app, 30 days ahead
-  fajr:    { adhanAt, liveStartAt, iqamahAt, leaveByAt, closingAt, endAt }
+  fajr:    { adhanAt, liveStartAt, iqamahAt, closingAt, endAt }
   dhuhr:   { ... } asr: {...} maghrib: {...} isha: {...}
   source:  "app" | "server"
   publishedAt: timestamp

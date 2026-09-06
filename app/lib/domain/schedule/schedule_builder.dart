@@ -6,14 +6,10 @@ import 'prayer_event.dart';
 /// Settings consumed by [ScheduleBuilder] that are not part of the prayer
 /// times or the iqamah profile.
 class ScheduleSettings {
-  final int travelMinutes;
-  final int bufferMinutes;
   final int closingOffsetMinutes;
   final int preAdhanOffsetMinutes;
 
   const ScheduleSettings({
-    required this.travelMinutes,
-    required this.bufferMinutes,
     required this.closingOffsetMinutes,
     required this.preAdhanOffsetMinutes,
   });
@@ -36,9 +32,6 @@ class ScheduleBuilder {
         Duration(minutes: settings.preAdhanOffsetMinutes),
       );
       final iqamahAt = adhanAt.add(Duration(minutes: profile.offsetFor(prayer)));
-      final leaveByAt = iqamahAt.subtract(
-        Duration(minutes: settings.travelMinutes + settings.bufferMinutes),
-      );
       final endAt = day.windowEnd(prayer);
       final closingAt = endAt.subtract(
         Duration(minutes: settings.closingOffsetMinutes),
@@ -50,7 +43,6 @@ class ScheduleBuilder {
         preAdhanAt: preAdhanAt,
         adhanAt: adhanAt,
         iqamahAt: iqamahAt,
-        leaveByAt: leaveByAt,
         closingAt: closingAt.isBefore(iqamahAt) ? iqamahAt : closingAt,
         endAt: endAt,
       );

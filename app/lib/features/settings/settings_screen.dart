@@ -100,16 +100,6 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             _StepperTile(
-              title: l10n.travelMinutesLabel,
-              value: values.travelMinutes,
-              onChanged: (v) => _setInt(ref, SettingsKeys.travelMinutes, v),
-            ),
-            _StepperTile(
-              title: l10n.bufferMinutesLabel,
-              value: values.bufferMinutes,
-              onChanged: (v) => _setInt(ref, SettingsKeys.bufferMinutes, v),
-            ),
-            _StepperTile(
               title: l10n.closingOffsetLabel,
               value: values.closingOffsetMinutes,
               onChanged: (v) => _setInt(ref, SettingsKeys.closingOffsetMinutes, v),
@@ -399,8 +389,6 @@ class _SettingsValues {
   final bool ramadanMode;
   final String normalProfileId;
   final String ramadanProfileId;
-  final int travelMinutes;
-  final int bufferMinutes;
   final int closingOffsetMinutes;
   final bool lateCountsAsQada;
   final String languageCode;
@@ -413,8 +401,6 @@ class _SettingsValues {
     required this.ramadanMode,
     required this.normalProfileId,
     required this.ramadanProfileId,
-    required this.travelMinutes,
-    required this.bufferMinutes,
     required this.closingOffsetMinutes,
     required this.lateCountsAsQada,
     required this.languageCode,
@@ -433,10 +419,6 @@ final _settingsValuesProvider = FutureProvider<_SettingsValues>((ref) async {
         IqamahProfileRepository.normalProfileId,
     ramadanProfileId: await settings.getString(SettingsKeys.ramadanIqamahProfileId) ??
         IqamahProfileRepository.ramadanProfileId,
-    travelMinutes: await settings.getInt(SettingsKeys.travelMinutes) ??
-        PrayerConfig.defaultTravelMinutes,
-    bufferMinutes: await settings.getInt(SettingsKeys.bufferMinutes) ??
-        PrayerConfig.defaultBufferMinutes,
     closingOffsetMinutes:
         await settings.getInt(SettingsKeys.closingOffsetMinutes) ??
             PrayerConfig.defaultClosingOffsetMinutes,

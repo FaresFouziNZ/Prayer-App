@@ -19,7 +19,7 @@ This document specifies the functional and non-functional requirements for the M
 Existing prayer apps solve prayer times, adhan, and qibla well. This product treats those as plumbing and focuses on **prayer discipline**: knowing exactly when to leave for jama'ah, logging honestly what happened, and seeing the truth in statistics and a qada plan. The distinguishing feature is a live countdown on the lock screen (iOS Live Activity / Android live notification) showing time remaining to iqamah and time remaining before the prayer window closes, with logging directly from that surface.
 
 ### 1.3 Scope of the MVP
-In scope: prayer times, notifications, iqamah profiles and leave-by reminders, live countdown surface, home screen widget, prayer/sunnah tracker, qada, statistics, Ramadan mode, Arabic/English UI, local backup. A thin Firebase backend exists **only** to start, update, and end the iOS Live Activity remotely.
+In scope: prayer times, notifications, iqamah profiles, live countdown surface, home screen widget, prayer/sunnah tracker, qada, statistics, Ramadan mode, Arabic/English UI, local backup. A thin Firebase backend exists **only** to start, update, and end the iOS Live Activity remotely.
 
 Out of scope for the MVP: see §6.
 
@@ -37,7 +37,6 @@ Out of scope for the MVP: see §6.
 | Rawatib | The regular sunnah prayers attached to the five obligatory prayers. |
 | Islamic midnight | Midpoint between Maghrib and the following Fajr. |
 | Iqamah profile | A named set of per-prayer iqamah offsets (e.g. Normal, Ramadan). |
-| Leave-by time | Iqamah time minus the user's travel minutes minus a buffer. |
 | Live surface | The iOS Live Activity (lock screen + Dynamic Island) or the Android ongoing notification with a live chronometer. |
 | Live start | Adhan time plus a fixed grace period (5 minutes) — when the live surface first appears, so it doesn't compete with the adhan notification itself. |
 
@@ -104,7 +103,6 @@ Priority: **M** = must (MVP), **S** = should (v2), **C** = could (v3). Only M it
 | FR-NT-01 | M | Adhan notification at each prayer's adhan time, individually enable/disable per prayer. |
 | FR-NT-02 | M | Selectable adhan sound per prayer: system default, bundled adhan clip (≤30 s on iOS), or silent. |
 | FR-NT-03 | M | Pre-adhan reminder with a configurable offset (e.g. 10 minutes before). |
-| FR-NT-04 | M | Leave-by reminder: fires at iqamah − travel minutes − buffer, where travel minutes and buffer are user settings. |
 | FR-NT-05 | M | Window-closing reminder at a configurable offset before the window ends (default 30 minutes), only if the prayer has not been logged. |
 | FR-NT-06 | M | End-of-window prompt: when the window closes and the prayer is unlogged, a notification asks "Did you pray X?" with actions Jama'ah / Alone / Not yet. Actions log without opening the app. |
 | FR-NT-07 | M | Notifications must fire on schedule with the app killed, after device reboot, and (Android) under Doze. |
@@ -117,14 +115,13 @@ Priority: **M** = must (MVP), **S** = should (v2), **C** = could (v3). Only M it
 - AC-NT-3: Tapping "Jama'ah" on the end-of-window prompt creates a `prayer_log` row with status `jamaah` and `source = notification_action`.
 - AC-NT-4: On iOS, pending notifications never exceed 64 and the schedule never runs empty while the backend is reachable.
 
-### FR-IQ — Iqamah profiles and leave-by
+### FR-IQ — Iqamah profiles
 
 | ID | Pri | Requirement |
 |---|---|---|
 | FR-IQ-01 | M | Iqamah time per prayer = adhan time + offset from the active iqamah profile. |
 | FR-IQ-02 | M | Profiles: **Normal** and **Ramadan** ship as editable defaults; the user may create **Custom** profiles. Default offsets are confirmed against the current Ministry circular (O1). |
 | FR-IQ-03 | M | Per-prayer override for a single "my mosque" that differs from the standard. |
-| FR-IQ-04 | M | Travel minutes and buffer minutes are user settings used by FR-NT-04 and the live surface. |
 | FR-IQ-05 | M | The active profile switches automatically when Ramadan mode is on, and back when it is off. |
 
 Default offsets (minutes after adhan) — confirmed against the current Ministry circular (O1):
@@ -138,7 +135,7 @@ Default offsets (minutes after adhan) — confirmed against the current Ministry
 | Isha | 20 | 15 |
 
 **Acceptance criteria**
-- AC-IQ-1: Changing a profile value updates the next iqamah time, the leave-by notification, the widget, and the published schedule.
+- AC-IQ-1: Changing a profile value updates the next iqamah time, the widget, and the published schedule.
 - AC-IQ-2: The Ramadan toggle changes the active profile and all downstream times in one action.
 
 ### FR-LA — Live countdown surface
@@ -263,7 +260,7 @@ Default offsets (minutes after adhan) — confirmed against the current Ministry
 | ID | Pri | Requirement |
 |---|---|---|
 | FR-SY-01 | M | On first launch the app signs in anonymously to Firebase and creates its device document. |
-| FR-SY-02 | M | The app publishes to Firestore: FCM token, push-to-start token, current activity push token, timezone, location, calculation parameters, active iqamah profile, Ramadan mode, travel and buffer minutes. Updates are pushed whenever any of these change. |
+| FR-SY-02 | M | The app publishes to Firestore: FCM token, push-to-start token, current activity push token, timezone, location, calculation parameters, active iqamah profile, Ramadan mode. Updates are pushed whenever any of these change. |
 | FR-SY-03 | M | The app publishes its own computed schedule (adhan, iqamah, closing, end per prayer) for the next 30 days on every launch and settings change. The backend uses this schedule as the source of truth. |
 | FR-SY-04 | M | The backend computes times itself only when the published schedule does not cover the target day. |
 | FR-SY-05 | M | Tracker data, sunnah, qada, and notes are **never** sent to the backend in the MVP. |
@@ -346,3 +343,4 @@ Default offsets (minutes after adhan) — confirmed against the current Ministry
 | 2026-09-06 | O3 resolved: app name is "My Prayer" (English) / "صلاتي" (Arabic) | Working title chosen. |
 | 2026-09-06 | O4 deferred: ship with the system default notification sound; revisit a bundled adhan clip once a licensed source is found | No licensed ≤30s clip available yet; system default is a safe interim choice already supported by the notification-sound setting. |
 | 2026-09-06 | O5 resolved: closing-phase offset default confirmed at 30 minutes | Matches `PrayerConfig.defaultClosingOffsetMinutes`, already shipped and user-configurable per prayer. |
+| 2026-09-06 | Removed the leave-by reminder entirely: FR-NT-04 and FR-IQ-04 retired (IDs not reused), travel/buffer-minutes settings and the leave-by notification, Settings tiles, and next-prayer-card row all deleted | Product decision — dropped rather than kept as a disabled/unused feature. |

@@ -21,9 +21,8 @@ class PrayerNotificationPreference {
 }
 
 /// Schedules a rolling window of local notifications for a list of
-/// [PrayerEvent]s (SRS FR-NT, §2.6): adhan, pre-adhan, leave-by, closing,
-/// and the end-prompt, and cancels the conditional ones once a prayer is
-/// logged.
+/// [PrayerEvent]s (SRS FR-NT, §2.6): adhan, pre-adhan, closing, and the
+/// end-prompt, and cancels the conditional ones once a prayer is logged.
 abstract class NotificationScheduler {
   Future<void> initialize();
 
@@ -126,7 +125,7 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
       _remindersChannelId,
       'Reminders',
-      description: 'Pre-adhan, leave-by, and window-closing reminders',
+      description: 'Pre-adhan and window-closing reminders',
       importance: Importance.defaultImportance,
     ));
 
@@ -173,16 +172,6 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
         title: name,
         body: l10n.notifAdhanBody(name),
         channelId: _adhanChannelId,
-        silent: preference.silent,
-        payload: payload,
-      );
-      await _scheduleOne(
-        id: NotificationIds.forEvent(event.date, event.prayer, NotificationKind.leaveBy),
-        at: event.leaveByAt,
-        now: now,
-        title: name,
-        body: l10n.notifLeaveByBody(name),
-        channelId: _remindersChannelId,
         silent: preference.silent,
         payload: payload,
       );

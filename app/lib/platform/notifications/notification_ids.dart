@@ -1,9 +1,9 @@
 import '../../domain/prayer_engine/prayer.dart';
 
-/// The five notification moments per prayer (SRS §2.6): pre-adhan is
+/// The four notification moments per prayer (SRS §2.6): pre-adhan is
 /// optional, closing and the end prompt are conditional on the prayer still
 /// being unlogged.
-enum NotificationKind { preAdhan, adhan, leaveBy, closing, endPrompt }
+enum NotificationKind { preAdhan, adhan, closing, endPrompt }
 
 /// Deterministic, collision-free platform notification IDs, so the same
 /// (date, prayer, kind) always maps to the same ID — required to cancel or
@@ -18,7 +18,7 @@ class NotificationIds {
   static int _prayerIndex(Prayer prayer) => Prayer.values.indexOf(prayer);
 
   /// Fits comfortably in a 32-bit int for centuries: epochDay * 100 leaves
-  /// two decimal digits for prayerIndex (0-4) * 10 + kind (0-4), max 44.
+  /// two decimal digits for prayerIndex (0-4) * 10 + kind (0-3), max 43.
   static int forEvent(DateTime date, Prayer prayer, NotificationKind kind) {
     return _epochDay(date) * 100 + _prayerIndex(prayer) * 10 + kind.index;
   }
@@ -30,8 +30,8 @@ class NotificationIds {
   }
 
   /// Just the conditional ones (closing, end prompt), cancelled once the
-  /// prayer is logged (FR-NT-05, FR-NT-06) while pre-adhan/adhan/leave-by —
-  /// which fire before logging is even possible — are left alone.
+  /// prayer is logged (FR-NT-05, FR-NT-06) while pre-adhan/adhan — which
+  /// fire before logging is even possible — are left alone.
   static List<int> conditionalForPrayer(DateTime date, Prayer prayer) {
     return [
       forEvent(date, prayer, NotificationKind.closing),
