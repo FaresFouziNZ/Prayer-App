@@ -67,9 +67,16 @@ class _PrayerAppState extends ConsumerState<PrayerApp> with WidgetsBindingObserv
 /// Also syncs `intl`'s default locale so `DateFormat` calls throughout the
 /// app (history dates, prayer times) follow the in-app language choice
 /// rather than only the OS locale (FR-UI-01).
-final _languageCodeProvider = FutureProvider<String>((ref) async {
+///
+/// A [StreamProvider] over the live setting (rather than a one-shot
+/// [FutureProvider]) so switching languages in Settings takes effect
+/// immediately, without every settings-writing call site needing to
+/// remember to invalidate this provider too.
+final _languageCodeProvider = StreamProvider<String>((ref) {
   final settings = ref.watch(settingsRepositoryProvider);
-  final code = await settings.getString(SettingsKeys.languageCode) ?? 'en';
-  intl.Intl.defaultLocale = code;
-  return code;
+  return settings.watchString(SettingsKeys.languageCode).map((code) {
+    final resolved = code ?? 'en';
+    intl.Intl.defaultLocale = resolved;
+    return resolved;
+  });
 });
