@@ -27,6 +27,18 @@
   "create": "إنشاء",
   "dismiss": "إخفاء",
 
+  "onboardingSkip": "تخطي",
+  "onboardingNext": "التالي",
+  "onboardingGetStarted": "ابدأ الآن",
+  "onboardingWelcomeTitle": "مرحبًا بك في صلاتي",
+  "onboardingWelcomeBody": "ابنِ عادة الصلاة في وقتها، يومًا بعد يوم.",
+  "onboardingTimesTitle": "مواقيت صلاة دقيقة",
+  "onboardingTimesBody": "تُحسب مواقيت الصلاة لموقعك وتعمل بالكامل بلا إنترنت.",
+  "onboardingTrackTitle": "سجّل كل صلاة",
+  "onboardingTrackBody": "سجّل كل صلاة كجماعة أو منفردًا أو متأخرًا أو فائتة، تابع السنن، وشاهد إحصائياتك وتتابعك يتحسنان.",
+  "onboardingRamadanTitle": "رمضان والقضاء، جاهزان",
+  "onboardingRamadanBody": "يُضبط الجدول تلقائيًا في رمضان، ويتابع القضاء الصلوات الفائتة، والتذكيرات تحترم وضع عدم الإزعاج.",
+
   "historyPreInstallLabel": "{count} يومًا قبل تثبيت التطبيق",
 
   "errorLabel": "خطأ: {error}",

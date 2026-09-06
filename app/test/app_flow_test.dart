@@ -377,4 +377,53 @@ void main() {
       await _disposeCleanly(tester);
     }
   });
+
+  testWidgets('onboarding: skipping marks it complete and lands on Home',
+      (tester) async {
+    try {
+      appRouter.go('/onboarding');
+      await tester.pumpWidget(buildApp());
+      await _settle(tester);
+
+      expect(find.text('Welcome to My Prayer'), findsOneWidget);
+
+      await tester.tap(find.text('Skip'));
+      await _settle(tester);
+
+      expect(find.byType(TodayPrayerList), findsOneWidget);
+      expect(
+        await SettingsRepository(db).getBool(SettingsKeys.onboardingComplete),
+        isTrue,
+      );
+    } finally {
+      await _disposeCleanly(tester);
+    }
+  });
+
+  testWidgets(
+      'onboarding: paging to the last page and tapping Get Started completes it',
+      (tester) async {
+    try {
+      appRouter.go('/onboarding');
+      await tester.pumpWidget(buildApp());
+      await _settle(tester);
+
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.text('Next'));
+        await _settle(tester);
+      }
+
+      expect(find.text('Get Started'), findsOneWidget);
+      await tester.tap(find.text('Get Started'));
+      await _settle(tester);
+
+      expect(find.byType(TodayPrayerList), findsOneWidget);
+      expect(
+        await SettingsRepository(db).getBool(SettingsKeys.onboardingComplete),
+        isTrue,
+      );
+    } finally {
+      await _disposeCleanly(tester);
+    }
+  });
 }

@@ -27,6 +27,18 @@
   "create": "Create",
   "dismiss": "Dismiss",
 
+  "onboardingSkip": "Skip",
+  "onboardingNext": "Next",
+  "onboardingGetStarted": "Get Started",
+  "onboardingWelcomeTitle": "Welcome to My Prayer",
+  "onboardingWelcomeBody": "Build a consistent prayer habit, one day at a time.",
+  "onboardingTimesTitle": "Accurate Prayer Times",
+  "onboardingTimesBody": "Prayer times are calculated for your location and work fully offline — no internet required.",
+  "onboardingTrackTitle": "Track Every Prayer",
+  "onboardingTrackBody": "Log each prayer as Jama'ah, alone, late, or missed, check off your sunnahs, and watch your stats and streaks grow.",
+  "onboardingRamadanTitle": "Ramadan & Qada, Covered",
+  "onboardingRamadanBody": "Ramadan adjusts your schedule automatically, a qada tracker keeps count of missed prayers, and reminders respect Do Not Disturb.",
+
   "historyPreInstallLabel": "{count} days before you installed the app",
   "@historyPreInstallLabel": { "placeholders": { "count": { "type": "int" } } },
 

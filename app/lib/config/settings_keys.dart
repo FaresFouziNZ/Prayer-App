@@ -33,6 +33,10 @@ class SettingsKeys {
   static const String dndDuringPrayer = 'dnd_during_prayer';
   static const String dndDurationMinutes = 'dnd_duration_minutes';
 
+  /// Whether the first-launch onboarding carousel has been shown once
+  /// (skip or "Get Started" both set this — it never reappears).
+  static const String onboardingComplete = 'onboarding_complete';
+
   /// The date (Codecs.dateKey format) this install first ran. Written once,
   /// in main(), and never rewritten — lets History tell "no data because
   /// you hadn't installed the app yet" apart from "not logged".

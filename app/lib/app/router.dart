@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/history/history_screen.dart';
 import '../features/home/home_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/qada/qada_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/stats/stats_screen.dart';
@@ -11,6 +12,10 @@ import '../l10n/app_localizations.dart';
 final appRouter = GoRouter(
   initialLocation: '/home',
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           _AppShell(navigationShell: navigationShell),
