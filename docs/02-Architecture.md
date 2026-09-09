@@ -163,7 +163,7 @@ CREATE TABLE prayer_log (
   source       TEXT NOT NULL,              -- manual|notification_action|live_activity|import
   travelling   INTEGER NOT NULL DEFAULT 0,
   combined_with TEXT,                      -- prayer name or NULL
-  note         TEXT,
+  excuse       TEXT,                       -- overslept|busy|forgot|travel|sick|other, only for late|missed
   UNIQUE (date, prayer)
 );
 CREATE INDEX idx_prayer_log_date ON prayer_log(date);
@@ -189,22 +189,29 @@ CREATE TABLE qada_opening_balance (
   prayer  TEXT PRIMARY KEY,
   count   INTEGER NOT NULL DEFAULT 0
 );
+
+-- Period-day exemption (FR-EX, opt-in). A row's presence marks the day —
+-- there's nothing else to store.
+CREATE TABLE period_day (
+  date  TEXT PRIMARY KEY
+);
 ```
 
 **Derived, never stored**
 ```sql
--- qada balance per prayer (late_counts_as_qada read from settings)
+-- qada balance per prayer (FR-EX-05: period-day dates are excluded, i.e.
+-- a `missed` row whose date is in period_day doesn't count)
 SELECT p.prayer,
        COALESCE(ob.count,0)
      + (SELECT COUNT(*) FROM prayer_log l
-         WHERE l.prayer = p.prayer
-           AND (l.status = 'missed' OR (:late_counts AND l.status = 'late')))
+         WHERE l.prayer = p.prayer AND l.status = 'missed'
+           AND l.date NOT IN (SELECT date FROM period_day))
      - COALESCE((SELECT SUM(count) FROM qada_payment q WHERE q.prayer = p.prayer),0) AS balance
 FROM (SELECT DISTINCT prayer FROM prayer_log UNION SELECT prayer FROM qada_opening_balance) p
 LEFT JOIN qada_opening_balance ob ON ob.prayer = p.prayer;
 ```
 
-Streak rule (in Dart, over daily aggregates): a day counts toward the streak only if it has five rows and none is `missed`; a day with fewer than five rows is *neutral* — it neither extends nor breaks the streak (SRS AC-ST-2).
+Streak rule (in Dart, over daily aggregates): a day counts toward the streak only if it has five rows and none is `missed`; a day with fewer than five rows is *neutral* — it neither extends nor breaks the streak (SRS AC-ST-2). Period days (FR-EX-04) are dropped from the day list before this runs, so they're skipped entirely rather than treated as neutral.
 
 ### 2.5 Tracker rules (domain layer)
 
@@ -214,8 +221,9 @@ Streak rule (in Dart, over daily aggregates): a day counts toward the streak onl
 | Log after window closed, same or later day | status `late` unless the user explicitly chooses `missed`. UI defaults the button label to "Prayed late". |
 | Friday, prayer = dhuhr, status ∈ {jamaah, on_time_alone} | stored as `jamaah` (FR-TR-07). |
 | Travelling and combining | logging one of the pair offers "combined with X"; writes two rows with the same `prayed_at`, both `on_time_alone` or `jamaah`, `combined_with` set both ways. |
-| Edit | updates `status`/`prayed_at`/`note`, sets `logged_at = now`. Backfill indicator = `logged_at.date > date`. |
-| Delete | hard delete; balances recompute. |
+| Log as late/missed | prompts for `excuse` (FR-TR-09); required to save. |
+| Edit | updates `status`/`prayed_at`/`excuse`, sets `logged_at = now`. `excuse` is cleared if the new status isn't `late`/`missed`. Backfill indicator = `logged_at.date > date`. |
+| Delete | hard delete; if the record was combined (`combined_with` set), its partner is deleted too. Balances recompute. |
 
 ### 2.6 Notification design
 
