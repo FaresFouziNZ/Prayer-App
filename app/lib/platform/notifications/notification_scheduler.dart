@@ -12,12 +12,37 @@ import 'notification_ids.dart';
 import 'notification_payload.dart';
 import 'notification_response_handler.dart';
 
+/// A prayer's adhan sound choice (SRS FR-NT-02).
+enum NotificationSoundMode {
+  defaultSound,
+  silent,
+  custom;
+
+  static NotificationSoundMode fromSettingsValue(String value) =>
+      switch (value) {
+        'silent' => NotificationSoundMode.silent,
+        'custom' => NotificationSoundMode.custom,
+        _ => NotificationSoundMode.defaultSound,
+      };
+}
+
 /// Per-prayer notification settings (SRS FR-NT-01, FR-NT-02).
 class PrayerNotificationPreference {
   final bool enabled;
-  final bool silent;
+  final NotificationSoundMode soundMode;
 
-  const PrayerNotificationPreference({required this.enabled, required this.silent});
+  /// The custom sound's `content://` URI. Only meaningful (and required, for
+  /// the adhan notification to actually use it) when [soundMode] is
+  /// [NotificationSoundMode.custom].
+  final String? customSoundUri;
+
+  const PrayerNotificationPreference({
+    required this.enabled,
+    required this.soundMode,
+    this.customSoundUri,
+  });
+
+  bool get silent => soundMode == NotificationSoundMode.silent;
 }
 
 /// Schedules a rolling window of local notifications for a list of
@@ -63,7 +88,22 @@ class UnimplementedNotificationScheduler implements NotificationScheduler {
 
 const String _adhanChannelId = 'adhan';
 const String _remindersChannelId = 'reminders';
+const String _customAdhanChannelPrefix = 'adhan_custom_';
 const String _endPromptCategoryId = 'end_prompt';
+
+/// A notification channel's sound is fixed at creation and Android silently
+/// ignores later attempts to change it on the same channel ID — the only way
+/// to change a prayer's custom sound is a new channel ID. Deriving the ID
+/// from the sound URI's own content (rather than a manually bumped version
+/// counter) makes this self-managing: picking a new file naturally yields a
+/// new ID, and re-picking the same file reuses the same channel.
+String _stableHash(String input) {
+  var hash = 0x811c9dc5;
+  for (final unit in input.codeUnits) {
+    hash = ((hash ^ unit) * 0x01000193) & 0xFFFFFFFF;
+  }
+  return hash.toRadixString(16).padLeft(8, '0');
+}
 
 /// Real implementation backed by `flutter_local_notifications`
 /// (SRS §2.1 stack table).
@@ -79,7 +119,9 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     final localTimezone = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(localTimezone.identifier));
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     final darwinSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -98,14 +140,20 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
               'Alone',
               options: {DarwinNotificationActionOption.foreground},
             ),
-            DarwinNotificationAction.plain(NotificationActionIds.notYet, 'Not yet'),
+            DarwinNotificationAction.plain(
+              NotificationActionIds.notYet,
+              'Not yet',
+            ),
           ],
         ),
       ],
     );
 
     await _plugin.initialize(
-      settings: InitializationSettings(android: androidSettings, iOS: darwinSettings),
+      settings: InitializationSettings(
+        android: androidSettings,
+        iOS: darwinSettings,
+      ),
       onDidReceiveNotificationResponse: (response) {
         handleNotificationResponse(response);
       },
@@ -113,21 +161,27 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     );
 
     final androidPlugin = _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidPlugin?.requestNotificationsPermission();
     await androidPlugin?.requestExactAlarmsPermission();
-    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
-      _adhanChannelId,
-      'Adhan',
-      description: 'Adhan notifications for each prayer',
-      importance: Importance.high,
-    ));
-    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
-      _remindersChannelId,
-      'Reminders',
-      description: 'Pre-adhan and window-closing reminders',
-      importance: Importance.defaultImportance,
-    ));
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _adhanChannelId,
+        'Adhan',
+        description: 'Adhan notifications for each prayer',
+        importance: Importance.high,
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _remindersChannelId,
+        'Reminders',
+        description: 'Pre-adhan and window-closing reminders',
+        importance: Importance.defaultImportance,
+      ),
+    );
 
     _initialized = true;
   }
@@ -151,12 +205,24 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
       }
 
       final isJumuah = isFriday && event.prayer == Prayer.dhuhr;
-      final name = PrayerNames.displayNameFor(l10n, isArabicLocale, event.prayer,
-          isJumuah: isJumuah);
-      final payload = NotificationPayload(date: event.date, prayer: event.prayer).encode();
+      final name = PrayerNames.displayNameFor(
+        l10n,
+        isArabicLocale,
+        event.prayer,
+        isJumuah: isJumuah,
+      );
+      final payload = NotificationPayload(
+        date: event.date,
+        prayer: event.prayer,
+      ).encode();
+      final adhanChannelId = await _adhanChannelIdFor(event.prayer, preference);
 
       await _scheduleOne(
-        id: NotificationIds.forEvent(event.date, event.prayer, NotificationKind.preAdhan),
+        id: NotificationIds.forEvent(
+          event.date,
+          event.prayer,
+          NotificationKind.preAdhan,
+        ),
         at: event.preAdhanAt,
         now: now,
         title: name,
@@ -166,17 +232,30 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
         payload: payload,
       );
       await _scheduleOne(
-        id: NotificationIds.forEvent(event.date, event.prayer, NotificationKind.adhan),
+        id: NotificationIds.forEvent(
+          event.date,
+          event.prayer,
+          NotificationKind.adhan,
+        ),
         at: event.adhanAt,
         now: now,
         title: name,
         body: l10n.notifAdhanBody(name),
-        channelId: _adhanChannelId,
+        channelId: adhanChannelId,
         silent: preference.silent,
         payload: payload,
+        sound:
+            preference.soundMode == NotificationSoundMode.custom &&
+                preference.customSoundUri != null
+            ? UriAndroidNotificationSound(preference.customSoundUri!)
+            : null,
       );
       await _scheduleOne(
-        id: NotificationIds.forEvent(event.date, event.prayer, NotificationKind.closing),
+        id: NotificationIds.forEvent(
+          event.date,
+          event.prayer,
+          NotificationKind.closing,
+        ),
         at: event.closingAt,
         now: now,
         title: name,
@@ -186,7 +265,11 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
         payload: payload,
       );
       await _scheduleOne(
-        id: NotificationIds.forEvent(event.date, event.prayer, NotificationKind.endPrompt),
+        id: NotificationIds.forEvent(
+          event.date,
+          event.prayer,
+          NotificationKind.endPrompt,
+        ),
         at: event.endAt,
         now: now,
         title: l10n.notifEndPromptTitle(name),
@@ -199,6 +282,39 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     }
   }
 
+  /// Resolves which channel the adhan-kind notification should post to: the
+  /// shared [_adhanChannelId] for 'default'/'silent', or a per-prayer channel
+  /// derived from the custom sound's URI. `flutter_local_notifications`
+  /// auto-creates a channel the first time it's used in
+  /// [AndroidNotificationDetails] (see `_scheduleOne`'s `sound` argument), so
+  /// this only has to pick the ID and sweep away any channel this prayer
+  /// used for a since-replaced sound choice.
+  Future<String> _adhanChannelIdFor(
+    Prayer prayer,
+    PrayerNotificationPreference preference,
+  ) async {
+    final uri = preference.customSoundUri;
+    if (preference.soundMode != NotificationSoundMode.custom || uri == null) {
+      return _adhanChannelId;
+    }
+
+    final prefix = '$_customAdhanChannelPrefix${prayer.name}_';
+    final targetId = '$prefix${_stableHash(uri)}';
+
+    final androidPlugin = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final existingChannels =
+        await androidPlugin?.getNotificationChannels() ?? [];
+    for (final channel in existingChannels) {
+      if (channel.id.startsWith(prefix) && channel.id != targetId) {
+        await androidPlugin?.deleteNotificationChannel(channelId: channel.id);
+      }
+    }
+    return targetId;
+  }
+
   Future<void> _scheduleOne({
     required int id,
     required DateTime at,
@@ -209,6 +325,7 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     required bool silent,
     required String payload,
     bool withActions = false,
+    AndroidNotificationSound? sound,
   }) async {
     if (at.isBefore(now)) {
       await _plugin.cancel(id: id);
@@ -218,10 +335,17 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
         channelId,
-        channelId == _adhanChannelId ? 'Adhan' : 'Reminders',
-        importance: withActions ? Importance.high : Importance.defaultImportance,
+        channelId == _adhanChannelId
+            ? 'Adhan'
+            : channelId.startsWith(_customAdhanChannelPrefix)
+            ? 'Adhan (custom sound)'
+            : 'Reminders',
+        importance: withActions
+            ? Importance.high
+            : Importance.defaultImportance,
         priority: withActions ? Priority.high : Priority.defaultPriority,
         silent: silent,
+        sound: sound,
         actions: withActions
             ? const [
                 AndroidNotificationAction(
