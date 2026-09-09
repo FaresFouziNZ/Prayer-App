@@ -29,15 +29,15 @@ class BackupData {
   });
 
   Map<String, dynamic> toJson() => {
-        'schema': schemaVersion,
-        'exportedAt': exportedAt.toIso8601String(),
-        'settings': settings,
-        'profiles': profiles.map((p) => p.toJson()).toList(),
-        'prayerLog': prayerLog.map(_prayerLogToJson).toList(),
-        'sunnahLog': sunnahLog.map(_sunnahLogToJson).toList(),
-        'qadaPayments': qadaPayments.map(_qadaPaymentToJson).toList(),
-        'qadaOpening': qadaOpening.map((k, v) => MapEntry(k.name, v)),
-      };
+    'schema': schemaVersion,
+    'exportedAt': exportedAt.toIso8601String(),
+    'settings': settings,
+    'profiles': profiles.map((p) => p.toJson()).toList(),
+    'prayerLog': prayerLog.map(_prayerLogToJson).toList(),
+    'sunnahLog': sunnahLog.map(_sunnahLogToJson).toList(),
+    'qadaPayments': qadaPayments.map(_qadaPaymentToJson).toList(),
+    'qadaOpening': qadaOpening.map((k, v) => MapEntry(k.name, v)),
+  };
 
   factory BackupData.fromJson(Map<String, dynamic> json) {
     final schema = json['schema'] as int;
@@ -66,17 +66,17 @@ class BackupData {
   }
 
   static Map<String, dynamic> _prayerLogToJson(PrayerLogEntry e) => {
-        'id': e.id,
-        'date': Codecs.dateKey(e.date),
-        'prayer': e.prayer.name,
-        'status': Codecs.statusToDb(e.status),
-        'prayedAt': e.prayedAt?.toIso8601String(),
-        'loggedAt': e.loggedAt.toIso8601String(),
-        'source': e.source.name,
-        'travelling': e.travelling,
-        'combinedWith': e.combinedWith,
-        'note': e.note,
-      };
+    'id': e.id,
+    'date': Codecs.dateKey(e.date),
+    'prayer': e.prayer.name,
+    'status': Codecs.statusToDb(e.status),
+    'prayedAt': e.prayedAt?.toIso8601String(),
+    'loggedAt': e.loggedAt.toIso8601String(),
+    'source': e.source.name,
+    'travelling': e.travelling,
+    'combinedWith': e.combinedWith,
+    'excuse': Codecs.excuseToDb(e.excuse),
+  };
 
   static PrayerLogEntry _prayerLogFromJson(Map<String, dynamic> j) =>
       PrayerLogEntry(
@@ -84,21 +84,22 @@ class BackupData {
         date: Codecs.parseDateKey(j['date'] as String),
         prayer: Codecs.prayerFromDb(j['prayer'] as String),
         status: Codecs.statusFromDb(j['status'] as String),
-        prayedAt:
-            j['prayedAt'] == null ? null : DateTime.parse(j['prayedAt'] as String),
+        prayedAt: j['prayedAt'] == null
+            ? null
+            : DateTime.parse(j['prayedAt'] as String),
         loggedAt: DateTime.parse(j['loggedAt'] as String),
         source: LogSource.values.firstWhere((s) => s.name == j['source']),
         travelling: j['travelling'] as bool? ?? false,
         combinedWith: j['combinedWith'] as String?,
-        note: j['note'] as String?,
+        excuse: Codecs.excuseFromDb(j['excuse'] as String?),
       );
 
   static Map<String, dynamic> _sunnahLogToJson(SunnahLogEntry e) => {
-        'date': Codecs.dateKey(e.date),
-        'item': Codecs.sunnahItemToDb(e.item),
-        'done': e.done,
-        'loggedAt': e.loggedAt.toIso8601String(),
-      };
+    'date': Codecs.dateKey(e.date),
+    'item': Codecs.sunnahItemToDb(e.item),
+    'done': e.done,
+    'loggedAt': e.loggedAt.toIso8601String(),
+  };
 
   static SunnahLogEntry _sunnahLogFromJson(Map<String, dynamic> j) =>
       SunnahLogEntry(
@@ -109,13 +110,13 @@ class BackupData {
       );
 
   static Map<String, dynamic> _qadaPaymentToJson(QadaPayment p) => {
-        'id': p.id,
-        'prayer': p.prayer.name,
-        'count': p.count,
-        'date': Codecs.dateKey(p.date),
-        'loggedAt': p.loggedAt.toIso8601String(),
-        'note': p.note,
-      };
+    'id': p.id,
+    'prayer': p.prayer.name,
+    'count': p.count,
+    'date': Codecs.dateKey(p.date),
+    'loggedAt': p.loggedAt.toIso8601String(),
+    'note': p.note,
+  };
 
   static QadaPayment _qadaPaymentFromJson(Map<String, dynamic> j) =>
       QadaPayment(
@@ -146,24 +147,24 @@ class BackupProfile {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'offsetMinutes': offsetMinutes.map((k, v) => MapEntry(k.name, v)),
-        'mosqueOverride': mosqueOverride?.map((k, v) => MapEntry(k.name, v)),
-        'isBuiltin': isBuiltin,
-      };
+    'id': id,
+    'name': name,
+    'offsetMinutes': offsetMinutes.map((k, v) => MapEntry(k.name, v)),
+    'mosqueOverride': mosqueOverride?.map((k, v) => MapEntry(k.name, v)),
+    'isBuiltin': isBuiltin,
+  };
 
   factory BackupProfile.fromJson(Map<String, dynamic> j) => BackupProfile(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        offsetMinutes: (j['offsetMinutes'] as Map).map(
-          (k, v) => MapEntry(Codecs.prayerFromDb(k as String), v as int),
-        ),
-        mosqueOverride: j['mosqueOverride'] == null
-            ? null
-            : (j['mosqueOverride'] as Map).map(
-                (k, v) => MapEntry(Codecs.prayerFromDb(k as String), v as int),
-              ),
-        isBuiltin: j['isBuiltin'] as bool? ?? false,
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    offsetMinutes: (j['offsetMinutes'] as Map).map(
+      (k, v) => MapEntry(Codecs.prayerFromDb(k as String), v as int),
+    ),
+    mosqueOverride: j['mosqueOverride'] == null
+        ? null
+        : (j['mosqueOverride'] as Map).map(
+            (k, v) => MapEntry(Codecs.prayerFromDb(k as String), v as int),
+          ),
+    isBuiltin: j['isBuiltin'] as bool? ?? false,
+  );
 }

@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 
 import '../prayer_engine/prayer.dart';
+import 'prayer_excuse.dart';
 import 'prayer_log_entry.dart';
 import 'prayer_status.dart';
 
@@ -17,7 +18,8 @@ class TrackerRules {
     required bool isFriday,
     required PrayerStatus requestedStatus,
   }) {
-    final isPrayedStatus = requestedStatus == PrayerStatus.jamaah ||
+    final isPrayedStatus =
+        requestedStatus == PrayerStatus.jamaah ||
         requestedStatus == PrayerStatus.onTimeAlone;
     if (isFriday && prayer == Prayer.dhuhr && isPrayedStatus) {
       return PrayerStatus.jamaah;
@@ -42,7 +44,7 @@ class TrackerRules {
     DateTime? now,
     bool travelling = false,
     String? combinedWith,
-    String? note,
+    PrayerExcuse? excuse,
   }) {
     final effectiveNow = now ?? DateTime.now();
     return PrayerLogEntry(
@@ -59,7 +61,7 @@ class TrackerRules {
       source: source,
       travelling: travelling,
       combinedWith: combinedWith,
-      note: note,
+      excuse: excuse,
     );
   }
 
@@ -120,14 +122,16 @@ class TrackerRules {
     return (firstEntry, secondEntry);
   }
 
-  /// Edits update status/prayedAt/note and bump `loggedAt` (FR-TR-05). A
-  /// changed status still goes through the Jumu'ah rule (FR-TR-07). [note]
-  /// defaults to "leave unchanged"; pass `null` explicitly to clear it.
+  /// Edits update status/prayedAt/excuse and bump `loggedAt` (FR-TR-05). A
+  /// changed status still goes through the Jumu'ah rule (FR-TR-07). Pass
+  /// [clearExcuse] when the new status is no longer `late`/`missed`, since a
+  /// carried-over excuse would otherwise misdescribe the edited record.
   static PrayerLogEntry edit(
     PrayerLogEntry entry, {
     PrayerStatus? status,
     DateTime? prayedAt,
-    Object? note = unsetPrayerLogNote,
+    PrayerExcuse? excuse,
+    bool clearExcuse = false,
     DateTime? now,
   }) {
     final resolvedStatus = status == null
@@ -140,7 +144,8 @@ class TrackerRules {
     return entry.copyWith(
       status: resolvedStatus,
       prayedAt: prayedAt,
-      note: note,
+      excuse: excuse,
+      clearExcuse: clearExcuse,
       loggedAt: now ?? DateTime.now(),
     );
   }

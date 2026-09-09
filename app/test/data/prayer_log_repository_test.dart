@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prayer_app/data/db/app_database.dart';
 import 'package:prayer_app/data/db/repositories/prayer_log_repository.dart';
 import 'package:prayer_app/domain/prayer_engine/prayer.dart';
+import 'package:prayer_app/domain/tracker/prayer_excuse.dart';
 import 'package:prayer_app/domain/tracker/prayer_log_entry.dart';
 import 'package:prayer_app/domain/tracker/prayer_status.dart';
 import 'package:uuid/uuid.dart';
@@ -22,7 +23,7 @@ void main() {
     required DateTime date,
     required Prayer prayer,
     required PrayerStatus status,
-    String? note,
+    PrayerExcuse? excuse,
   }) {
     return PrayerLogEntry(
       id: const Uuid().v4(),
@@ -32,7 +33,7 @@ void main() {
       prayedAt: date,
       loggedAt: date,
       source: LogSource.manual,
-      note: note,
+      excuse: excuse,
     );
   }
 
@@ -42,13 +43,12 @@ void main() {
 
     await repo.upsert(entry(date: date, prayer: Prayer.fajr, status: PrayerStatus.late));
     await repo.upsert(
-      entry(date: date, prayer: Prayer.fajr, status: PrayerStatus.jamaah, note: 'made it'),
+      entry(date: date, prayer: Prayer.fajr, status: PrayerStatus.jamaah),
     );
 
     final rows = await repo.getForDay(date);
     expect(rows, hasLength(1));
     expect(rows.single.status, PrayerStatus.jamaah);
-    expect(rows.single.note, 'made it');
   });
 
   test('editing an existing entry keeps its original id stable', () async {
@@ -62,5 +62,20 @@ void main() {
 
     final stored = await repo.getForDate(date, Prayer.asr);
     expect(stored!.id, first.id);
+  });
+
+  test('excuse round-trips through upsert and read', () async {
+    final date = DateTime(2026, 3, 1);
+    await repo.upsert(
+      entry(
+        date: date,
+        prayer: Prayer.isha,
+        status: PrayerStatus.missed,
+        excuse: PrayerExcuse.travel,
+      ),
+    );
+
+    final stored = await repo.getForDate(date, Prayer.isha);
+    expect(stored!.excuse, PrayerExcuse.travel);
   });
 }

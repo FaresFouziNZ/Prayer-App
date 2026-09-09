@@ -1,10 +1,6 @@
 import '../prayer_engine/prayer.dart';
+import 'prayer_excuse.dart';
 import 'prayer_status.dart';
-
-/// Sentinel distinguishing "leave [PrayerLogEntry.note] unchanged" from
-/// "set it to null" in [PrayerLogEntry.copyWith] and [TrackerRules.edit] —
-/// a plain `note ?? this.note` could never clear an existing note.
-const Object unsetPrayerLogNote = Object();
 
 /// Domain model mirroring one row of the `prayer_log` table (SRS §2.4).
 class PrayerLogEntry {
@@ -26,7 +22,10 @@ class PrayerLogEntry {
 
   /// Name of the other prayer this one was combined with (FR-TR-06).
   final String? combinedWith;
-  final String? note;
+
+  /// Why the prayer was `late`/`missed`, picked from a fixed set of
+  /// reasons; meaningless (and left null) for `jamaah`/`onTimeAlone`.
+  final PrayerExcuse? excuse;
 
   const PrayerLogEntry({
     required this.id,
@@ -38,17 +37,21 @@ class PrayerLogEntry {
     required this.source,
     this.travelling = false,
     this.combinedWith,
-    this.note,
+    this.excuse,
   });
 
   /// True when this entry was written on a later day than the prayer date
   /// (AC-TR-3).
-  bool get isBackfilled =>
-      DateTime(loggedAt.year, loggedAt.month, loggedAt.day)
-          .isAfter(DateTime(date.year, date.month, date.day));
+  bool get isBackfilled => DateTime(
+    loggedAt.year,
+    loggedAt.month,
+    loggedAt.day,
+  ).isAfter(DateTime(date.year, date.month, date.day));
 
-  /// [note] defaults to "leave unchanged"; pass `null` explicitly to clear
-  /// it, since a plain `note ?? this.note` could otherwise never do so.
+  /// [excuse] follows [status]/[prayedAt]'s "leave unchanged unless passed"
+  /// convention; pass [clearExcuse] to explicitly drop it (e.g. the status
+  /// changed away from `late`/`missed`), since a plain `excuse ?? this.excuse`
+  /// could otherwise never clear it.
   PrayerLogEntry copyWith({
     PrayerStatus? status,
     DateTime? prayedAt,
@@ -56,7 +59,8 @@ class PrayerLogEntry {
     LogSource? source,
     bool? travelling,
     String? combinedWith,
-    Object? note = unsetPrayerLogNote,
+    PrayerExcuse? excuse,
+    bool clearExcuse = false,
   }) {
     return PrayerLogEntry(
       id: id,
@@ -68,7 +72,7 @@ class PrayerLogEntry {
       source: source ?? this.source,
       travelling: travelling ?? this.travelling,
       combinedWith: combinedWith ?? this.combinedWith,
-      note: identical(note, unsetPrayerLogNote) ? this.note : note as String?,
+      excuse: clearExcuse ? null : (excuse ?? this.excuse),
     );
   }
 }

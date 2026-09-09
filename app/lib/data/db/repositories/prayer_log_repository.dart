@@ -22,7 +22,9 @@ class PrayerLogRepository {
 
   Future<void> upsert(PrayerLogEntry entry) {
     final table = _db.prayerLogTable;
-    return _db.into(table).insert(
+    return _db
+        .into(table)
+        .insert(
           PrayerLogTableCompanion.insert(
             id: entry.id,
             date: Codecs.dateKey(entry.date),
@@ -33,7 +35,7 @@ class PrayerLogRepository {
             source: entry.source.name,
             travelling: Value(entry.travelling),
             combinedWith: Value(entry.combinedWith),
-            note: Value(entry.note),
+            excuse: Value(Codecs.excuseToDb(entry.excuse)),
           ),
           onConflict: DoUpdate(
             (old) => PrayerLogTableCompanion(
@@ -43,7 +45,7 @@ class PrayerLogRepository {
               source: Value(entry.source.name),
               travelling: Value(entry.travelling),
               combinedWith: Value(entry.combinedWith),
-              note: Value(entry.note),
+              excuse: Value(Codecs.excuseToDb(entry.excuse)),
             ),
             target: [table.date, table.prayer],
           ),
@@ -55,35 +57,40 @@ class PrayerLogRepository {
   }
 
   Future<PrayerLogEntry?> getForDate(DateTime date, Prayer prayer) async {
-    final row = await (_db.select(_db.prayerLogTable)
-          ..where((t) =>
-              t.date.equals(Codecs.dateKey(date)) &
-              t.prayer.equals(Codecs.prayerToDb(prayer))))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.prayerLogTable)..where(
+              (t) =>
+                  t.date.equals(Codecs.dateKey(date)) &
+                  t.prayer.equals(Codecs.prayerToDb(prayer)),
+            ))
+            .getSingleOrNull();
     return row == null ? null : _toDomain(row);
   }
 
   Future<List<PrayerLogEntry>> getForDay(DateTime date) async {
-    final rows = await (_db.select(_db.prayerLogTable)
-          ..where((t) => t.date.equals(Codecs.dateKey(date))))
-        .get();
+    final rows = await (_db.select(
+      _db.prayerLogTable,
+    )..where((t) => t.date.equals(Codecs.dateKey(date)))).get();
     return rows.map(_toDomain).toList();
   }
 
   Future<List<PrayerLogEntry>> getBetween(DateTime start, DateTime end) async {
-    final rows = await (_db.select(_db.prayerLogTable)
-          ..where((t) =>
-              t.date.isBiggerOrEqualValue(Codecs.dateKey(start)) &
-              t.date.isSmallerOrEqualValue(Codecs.dateKey(end))))
-        .get();
+    final rows =
+        await (_db.select(_db.prayerLogTable)..where(
+              (t) =>
+                  t.date.isBiggerOrEqualValue(Codecs.dateKey(start)) &
+                  t.date.isSmallerOrEqualValue(Codecs.dateKey(end)),
+            ))
+            .get();
     return rows.map(_toDomain).toList();
   }
 
   Stream<List<PrayerLogEntry>> watchBetween(DateTime start, DateTime end) {
-    return (_db.select(_db.prayerLogTable)
-          ..where((t) =>
+    return (_db.select(_db.prayerLogTable)..where(
+          (t) =>
               t.date.isBiggerOrEqualValue(Codecs.dateKey(start)) &
-              t.date.isSmallerOrEqualValue(Codecs.dateKey(end))))
+              t.date.isSmallerOrEqualValue(Codecs.dateKey(end)),
+        ))
         .watch()
         .map((rows) => rows.map(_toDomain).toList());
   }
@@ -106,7 +113,7 @@ class PrayerLogRepository {
       source: LogSource.values.firstWhere((s) => s.name == row.source),
       travelling: row.travelling,
       combinedWith: row.combinedWith,
-      note: row.note,
+      excuse: Codecs.excuseFromDb(row.excuse),
     );
   }
 }

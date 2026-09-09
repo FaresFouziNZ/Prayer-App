@@ -19,7 +19,10 @@ class QadaPlan {
   DateTime projectedClearanceDate({DateTime? from}) {
     final start = from ?? DateTime.now();
     if (currentBalance <= 0) return start;
-    return DateTime(start.year, start.month, start.day)
-        .add(Duration(days: daysToClear));
+    return DateTime(
+      start.year,
+      start.month,
+      start.day,
+    ).add(Duration(days: daysToClear));
   }
 }

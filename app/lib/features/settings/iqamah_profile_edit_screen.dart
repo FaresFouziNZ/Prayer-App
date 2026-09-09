@@ -19,7 +19,8 @@ class IqamahProfileEditScreen extends ConsumerStatefulWidget {
       _IqamahProfileEditScreenState();
 }
 
-class _IqamahProfileEditScreenState extends ConsumerState<IqamahProfileEditScreen> {
+class _IqamahProfileEditScreenState
+    extends ConsumerState<IqamahProfileEditScreen> {
   Map<Prayer, int>? _offsets;
   Map<Prayer, int>? _mosqueOverride;
   bool _hasMosqueOverride = false;
@@ -34,13 +35,12 @@ class _IqamahProfileEditScreenState extends ConsumerState<IqamahProfileEditScree
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.editProfileTitle),
-        actions: [
-          IconButton(icon: const Icon(Icons.check), onPressed: _save),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.check), onPressed: _save)],
       ),
       body: profilesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
+        error: (error, stack) =>
+            Center(child: Text(l10n.errorLabel(error.toString()))),
         data: (profiles) {
           final profile = profiles.firstWhere((p) => p.id == widget.profileId);
           if (_loaded?.id != profile.id) {
@@ -62,7 +62,10 @@ class _IqamahProfileEditScreenState extends ConsumerState<IqamahProfileEditScree
                 decoration: InputDecoration(labelText: l10n.nameLabel),
               ),
               const SizedBox(height: 16),
-              Text(l10n.iqamahOffsetsLabel, style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                l10n.iqamahOffsetsLabel,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               for (final prayer in Prayer.values)
                 _OffsetRow(
                   label: PrayerNames.displayName(context, prayer),
@@ -74,14 +77,18 @@ class _IqamahProfileEditScreenState extends ConsumerState<IqamahProfileEditScree
                 title: Text(l10n.mosqueOverrideLabel),
                 subtitle: Text(l10n.mosqueOverrideSubtitle),
                 value: _hasMosqueOverride,
-                onChanged: (value) => setState(() => _hasMosqueOverride = value),
+                onChanged: (value) =>
+                    setState(() => _hasMosqueOverride = value),
               ),
               if (_hasMosqueOverride)
                 for (final prayer in Prayer.values)
                   _OffsetRow(
-                    label: l10n.mosqueOffsetSuffix(PrayerNames.displayName(context, prayer)),
+                    label: l10n.mosqueOffsetSuffix(
+                      PrayerNames.displayName(context, prayer),
+                    ),
                     value: _mosqueOverride![prayer]!,
-                    onChanged: (v) => setState(() => _mosqueOverride![prayer] = v),
+                    onChanged: (v) =>
+                        setState(() => _mosqueOverride![prayer] = v),
                   ),
             ],
           );
@@ -110,7 +117,11 @@ class _OffsetRow extends StatelessWidget {
   final int value;
   final ValueChanged<int> onChanged;
 
-  const _OffsetRow({required this.label, required this.value, required this.onChanged});
+  const _OffsetRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +134,10 @@ class _OffsetRow extends StatelessWidget {
             icon: const Icon(Icons.remove),
             onPressed: value > 0 ? () => onChanged(value - 1) : null,
           ),
-          SizedBox(width: 28, child: Text('$value', textAlign: TextAlign.center)),
+          SizedBox(
+            width: 28,
+            child: Text('$value', textAlign: TextAlign.center),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => onChanged(value + 1),

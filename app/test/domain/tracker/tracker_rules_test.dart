@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prayer_app/domain/prayer_engine/prayer.dart';
+import 'package:prayer_app/domain/tracker/prayer_excuse.dart';
 import 'package:prayer_app/domain/tracker/prayer_status.dart';
 import 'package:prayer_app/domain/tracker/tracker_rules.dart';
 
@@ -117,36 +118,6 @@ void main() {
     expect(edited.loggedAt, DateTime(2026, 3, 2, 9, 0));
   });
 
-  test('editing without passing note leaves an existing note untouched', () {
-    final original = TrackerRules.buildEntry(
-      prayer: Prayer.maghrib,
-      date: DateTime(2026, 3, 1),
-      status: PrayerStatus.jamaah,
-      isFriday: false,
-      source: LogSource.manual,
-      note: 'at the masjid',
-    );
-
-    final edited = TrackerRules.edit(original, status: PrayerStatus.late);
-
-    expect(edited.note, 'at the masjid');
-  });
-
-  test('editing with note explicitly null clears an existing note', () {
-    final original = TrackerRules.buildEntry(
-      prayer: Prayer.maghrib,
-      date: DateTime(2026, 3, 1),
-      status: PrayerStatus.jamaah,
-      isFriday: false,
-      source: LogSource.manual,
-      note: 'at the masjid',
-    );
-
-    final edited = TrackerRules.edit(original, note: null);
-
-    expect(edited.note, isNull);
-  });
-
   test('editing a Friday Dhuhr entry still applies the Jumu\'ah rule', () {
     final original = TrackerRules.buildEntry(
       prayer: Prayer.dhuhr,
@@ -164,5 +135,53 @@ void main() {
     );
 
     expect(edited.status, PrayerStatus.jamaah);
+  });
+
+  test('buildEntry carries an excuse through for late/missed', () {
+    final entry = TrackerRules.buildEntry(
+      prayer: Prayer.fajr,
+      date: DateTime(2026, 3, 1),
+      status: PrayerStatus.missed,
+      isFriday: false,
+      source: LogSource.manual,
+      excuse: PrayerExcuse.overslept,
+    );
+
+    expect(entry.excuse, PrayerExcuse.overslept);
+  });
+
+  test('editing without clearExcuse leaves an existing excuse untouched', () {
+    final original = TrackerRules.buildEntry(
+      prayer: Prayer.isha,
+      date: DateTime(2026, 3, 1),
+      status: PrayerStatus.late,
+      isFriday: false,
+      source: LogSource.manual,
+      excuse: PrayerExcuse.busy,
+    );
+
+    final edited = TrackerRules.edit(original, prayedAt: DateTime(2026, 3, 1, 20, 0));
+
+    expect(edited.excuse, PrayerExcuse.busy);
+  });
+
+  test('editing with clearExcuse drops the excuse (status no longer late/missed)', () {
+    final original = TrackerRules.buildEntry(
+      prayer: Prayer.isha,
+      date: DateTime(2026, 3, 1),
+      status: PrayerStatus.late,
+      isFriday: false,
+      source: LogSource.manual,
+      excuse: PrayerExcuse.busy,
+    );
+
+    final edited = TrackerRules.edit(
+      original,
+      status: PrayerStatus.jamaah,
+      clearExcuse: true,
+    );
+
+    expect(edited.status, PrayerStatus.jamaah);
+    expect(edited.excuse, isNull);
   });
 }

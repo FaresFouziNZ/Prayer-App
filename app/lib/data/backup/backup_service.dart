@@ -32,11 +32,11 @@ class BackupService {
   final QadaRepository _qada;
 
   BackupService(this._db)
-      : _settings = SettingsRepository(_db),
-        _profiles = IqamahProfileRepository(_db),
-        _prayerLog = PrayerLogRepository(_db),
-        _sunnah = SunnahRepository(_db),
-        _qada = QadaRepository(_db);
+    : _settings = SettingsRepository(_db),
+      _profiles = IqamahProfileRepository(_db),
+      _prayerLog = PrayerLogRepository(_db),
+      _sunnah = SunnahRepository(_db),
+      _qada = QadaRepository(_db);
 
   Future<String> exportToJsonString() async {
     final data = await _buildBackupData();
@@ -53,13 +53,15 @@ class BackupService {
       exportedAt: DateTime.now(),
       settings: {for (final row in settingsRows) row.key: row.value},
       profiles: profiles
-          .map((p) => BackupProfile(
-                id: p.id,
-                name: p.name,
-                offsetMinutes: p.offsetMinutes,
-                mosqueOverride: p.mosqueOverride,
-                isBuiltin: p.isBuiltin,
-              ))
+          .map(
+            (p) => BackupProfile(
+              id: p.id,
+              name: p.name,
+              offsetMinutes: p.offsetMinutes,
+              mosqueOverride: p.mosqueOverride,
+              isBuiltin: p.isBuiltin,
+            ),
+          )
           .toList(),
       prayerLog: await _prayerLog.getBetween(start, end),
       sunnahLog: await _sunnah.getAll(),
@@ -115,13 +117,15 @@ class BackupService {
       }
 
       for (final profile in incoming.profiles) {
-        await _profiles.upsert(IqamahProfile(
-          id: profile.id,
-          name: profile.name,
-          offsetMinutes: profile.offsetMinutes,
-          mosqueOverride: profile.mosqueOverride,
-          isBuiltin: profile.isBuiltin,
-        ));
+        await _profiles.upsert(
+          IqamahProfile(
+            id: profile.id,
+            name: profile.name,
+            offsetMinutes: profile.offsetMinutes,
+            mosqueOverride: profile.mosqueOverride,
+            isBuiltin: profile.isBuiltin,
+          ),
+        );
       }
 
       final existing = {

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../app/prayer_names.dart';
 import '../../app/providers.dart';
-import '../../config/settings_keys.dart';
 import '../../domain/prayer_engine/prayer.dart';
 import '../../domain/qada/qada_balance.dart';
 import '../../domain/qada/qada_payment.dart';
@@ -39,8 +38,12 @@ class _QadaScreenState extends ConsumerState<QadaScreen> {
             margin: const EdgeInsets.only(bottom: 16),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.secondaryContainer,
+                foregroundColor: Theme.of(
+                  context,
+                ).colorScheme.onSecondaryContainer,
                 child: const Icon(Icons.flag_rounded),
               ),
               title: Text(l10n.qadaPlanLabel),
@@ -53,7 +56,10 @@ class _QadaScreenState extends ConsumerState<QadaScreen> {
                         ? () => setState(() => _targetPerDay--)
                         : null,
                   ),
-                  Text('$_targetPerDay', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    '$_targetPerDay',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.add),
                     onPressed: () => setState(() => _targetPerDay++),
@@ -68,8 +74,12 @@ class _QadaScreenState extends ConsumerState<QadaScreen> {
               balance: balances[prayer] ?? 0,
               targetPerDay: _targetPerDay,
               onRecordPayment: () => _recordPayment(context, ref, prayer),
-              onSetOpeningBalance: () =>
-                  _setOpeningBalance(context, ref, prayer, balances[prayer] ?? 0),
+              onSetOpeningBalance: () => _setOpeningBalance(
+                context,
+                ref,
+                prayer,
+                balances[prayer] ?? 0,
+              ),
             ),
         ],
       ),
@@ -85,13 +95,17 @@ class _QadaScreenState extends ConsumerState<QadaScreen> {
     final count = await showDialog<int>(
       context: context,
       builder: (context) => _CountDialog(
-        title: l10n.recordPaymentTitle(PrayerNames.displayName(context, prayer)),
+        title: l10n.recordPaymentTitle(
+          PrayerNames.displayName(context, prayer),
+        ),
         label: l10n.countLabel,
         initial: 1,
       ),
     );
     if (count == null || count <= 0) return;
-    await ref.read(qadaRepositoryProvider).recordPayment(
+    await ref
+        .read(qadaRepositoryProvider)
+        .recordPayment(
           prayer: prayer,
           count: count,
           date: ref.read(todayProvider),
@@ -108,7 +122,9 @@ class _QadaScreenState extends ConsumerState<QadaScreen> {
     final count = await showDialog<int>(
       context: context,
       builder: (context) => _CountDialog(
-        title: l10n.setOpeningBalanceTitle(PrayerNames.displayName(context, prayer)),
+        title: l10n.setOpeningBalanceTitle(
+          PrayerNames.displayName(context, prayer),
+        ),
         label: l10n.openingBalanceHint,
         initial: currentBalance,
         allowZero: true,
@@ -150,7 +166,9 @@ class _QadaTile extends StatelessWidget {
         currentBalance: balance,
         targetPerDay: targetPerDay,
       );
-      subtitle = l10n.clearByLabel(DateFormat.yMMMd().format(plan.projectedClearanceDate()));
+      subtitle = l10n.clearByLabel(
+        DateFormat.yMMMd().format(plan.projectedClearanceDate()),
+      );
     }
 
     return Card(
@@ -169,9 +187,9 @@ class _QadaTile extends StatelessWidget {
             Text(
               '$balance',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: cleared ? scheme.onSurfaceVariant : scheme.secondary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: cleared ? scheme.onSurfaceVariant : scheme.secondary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.tune),
@@ -191,10 +209,9 @@ class _QadaTile extends StatelessWidget {
 /// (re)logged, a payment is recorded, or an opening balance changes,
 /// instead of only reflecting whatever was true when Qada was first opened.
 final _qadaLogsProvider = StreamProvider<List<PrayerLogEntry>>((ref) {
-  return ref.watch(prayerLogRepositoryProvider).watchBetween(
-        DateTime(1970),
-        DateTime.now(),
-      );
+  return ref
+      .watch(prayerLogRepositoryProvider)
+      .watchBetween(DateTime(1970), DateTime.now());
 });
 
 final _qadaPaymentsProvider = StreamProvider<List<QadaPayment>>((ref) {
@@ -205,19 +222,12 @@ final _qadaOpeningBalancesProvider = StreamProvider<Map<Prayer, int>>((ref) {
   return ref.watch(qadaRepositoryProvider).watchOpeningBalances();
 });
 
-final _lateCountsAsQadaProvider = StreamProvider<bool>((ref) {
-  return ref
-      .watch(settingsRepositoryProvider)
-      .watchBool(SettingsKeys.lateCountsAsQada)
-      .map((value) => value ?? false);
-});
-
 final _qadaBalancesProvider = Provider<Map<Prayer, int>>((ref) {
   return QadaBalance.compute(
     logs: ref.watch(_qadaLogsProvider).value ?? const [],
     payments: ref.watch(_qadaPaymentsProvider).value ?? const [],
     openingBalances: ref.watch(_qadaOpeningBalancesProvider).value ?? const {},
-    lateCountsAsQada: ref.watch(_lateCountsAsQadaProvider).value ?? false,
+    excludedDays: ref.watch(periodDaysProvider).value ?? const {},
   );
 });
 

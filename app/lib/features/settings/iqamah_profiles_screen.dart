@@ -25,7 +25,8 @@ class IqamahProfilesScreen extends ConsumerWidget {
       ),
       body: profilesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
+        error: (error, stack) =>
+            Center(child: Text(l10n.errorLabel(error.toString()))),
         data: (profiles) => ListView(
           children: [
             for (final profile in profiles)
@@ -44,7 +45,8 @@ class IqamahProfilesScreen extends ConsumerWidget {
                       ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => IqamahProfileEditScreen(profileId: profile.id),
+                    builder: (context) =>
+                        IqamahProfileEditScreen(profileId: profile.id),
                   ),
                 ),
               ),

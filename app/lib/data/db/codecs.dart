@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../domain/prayer_engine/prayer.dart';
+import '../../domain/tracker/prayer_excuse.dart';
 import '../../domain/tracker/prayer_status.dart';
 import '../../domain/tracker/sunnah.dart';
 
@@ -16,13 +17,23 @@ class Codecs {
 
   static DateTime parseDateKey(String key) {
     final parts = key.split('-');
-    return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    return DateTime(
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+      int.parse(parts[2]),
+    );
   }
 
   static String prayerToDb(Prayer prayer) => prayer.name;
 
   static Prayer prayerFromDb(String value) =>
       Prayer.values.firstWhere((p) => p.name == value);
+
+  static String? excuseToDb(PrayerExcuse? excuse) => excuse?.name;
+
+  static PrayerExcuse? excuseFromDb(String? value) => value == null
+      ? null
+      : PrayerExcuse.values.firstWhere((e) => e.name == value);
 
   static String statusToDb(PrayerStatus status) {
     switch (status) {

@@ -26,26 +26,30 @@ class ScheduleBuilder {
     IqamahProfile profile,
     ScheduleSettings settings,
   ) {
-    return Prayer.values.map((prayer) {
-      final adhanAt = day.adhanAt(prayer);
-      final preAdhanAt = adhanAt.subtract(
-        Duration(minutes: settings.preAdhanOffsetMinutes),
-      );
-      final iqamahAt = adhanAt.add(Duration(minutes: profile.offsetFor(prayer)));
-      final endAt = day.windowEnd(prayer);
-      final closingAt = endAt.subtract(
-        Duration(minutes: settings.closingOffsetMinutes),
-      );
+    return Prayer.values
+        .map((prayer) {
+          final adhanAt = day.adhanAt(prayer);
+          final preAdhanAt = adhanAt.subtract(
+            Duration(minutes: settings.preAdhanOffsetMinutes),
+          );
+          final iqamahAt = adhanAt.add(
+            Duration(minutes: profile.offsetFor(prayer)),
+          );
+          final endAt = day.windowEnd(prayer);
+          final closingAt = endAt.subtract(
+            Duration(minutes: settings.closingOffsetMinutes),
+          );
 
-      return PrayerEvent(
-        prayer: prayer,
-        date: day.date,
-        preAdhanAt: preAdhanAt,
-        adhanAt: adhanAt,
-        iqamahAt: iqamahAt,
-        closingAt: closingAt.isBefore(iqamahAt) ? iqamahAt : closingAt,
-        endAt: endAt,
-      );
-    }).toList(growable: false);
+          return PrayerEvent(
+            prayer: prayer,
+            date: day.date,
+            preAdhanAt: preAdhanAt,
+            adhanAt: adhanAt,
+            iqamahAt: iqamahAt,
+            closingAt: closingAt.isBefore(iqamahAt) ? iqamahAt : closingAt,
+            endAt: endAt,
+          );
+        })
+        .toList(growable: false);
   }
 }
