@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Light-mode widget palette, drawn from AppTheme.light()'s ColorScheme
+     (surfaceContainerLow / onSurface / primary) so the widget reads as part
+     of the same visual identity as the rest of the app. -->
+<resources>
+    <color name="widget_background">#F5F2E9</color>
+    <color name="widget_accent">#1B6E5B</color>
+    <color name="widget_text_primary">#1B1D1A</color>
+    <color name="widget_text_secondary">#6B7168</color>
+
+    <!-- FR-WD-03 status dots — echo AppTheme/PrayerColors' status mapping
+         (primary=jamaah, tertiary=on-time-alone, secondary=late,
+         error=missed, outline=not-logged) with fixed hex values, since
+         RemoteViews can't reach Flutter's Material3 seed-derived scheme. -->
+    <color name="widget_status_jamaah">#1B6E5B</color>
+    <color name="widget_status_on_time">#3A6EA5</color>
+    <color name="widget_status_late">#A1731F</color>
+    <color name="widget_status_missed">#BA1A1A</color>
+    <color name="widget_status_not_logged">#7C8579</color>
+</resources>

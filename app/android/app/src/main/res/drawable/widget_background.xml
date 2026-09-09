@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Theme-aware (values/values-night widget_colors.xml), matching the
+     app's own flat, zero-elevation Material3 card style. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_background"/>
+    <corners android:radius="20dp"/>
+</shape>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FR-WD-03: one of these per prayer, tinted at render time via
+     RemoteViews' setColorFilter (see PrayerWidgetProvider) — the fill color
+     here is irrelevant, only the oval shape matters. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#FFFFFF"/>
+    <size android:width="10dp" android:height="10dp"/>
+</shape>
