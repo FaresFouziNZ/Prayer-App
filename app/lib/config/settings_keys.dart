@@ -2,7 +2,6 @@
 class SettingsKeys {
   const SettingsKeys._();
 
-  static const String locationMode = 'location_mode'; // 'automatic' | 'manual'
   static const String latitude = 'latitude';
   static const String longitude = 'longitude';
   static const String locationLabel = 'location_label';
@@ -18,17 +17,23 @@ class SettingsKeys {
   static const String ramadanMode = 'ramadan_mode';
   static const String closingOffsetMinutes = 'closing_offset_minutes';
   static const String preAdhanOffsetMinutes = 'pre_adhan_offset_minutes';
-  static const String lateCountsAsQada = 'late_counts_as_qada';
   static const String languageCode = 'language_code'; // 'en' | 'ar'
   static const String themeMode = 'theme_mode'; // 'system' | 'light' | 'dark'
 
   /// Per-prayer adhan notification toggle (FR-NT-01): 'notify_fajr', etc.
   static String notifyEnabled(String prayerName) => 'notify_$prayerName';
 
-  /// Per-prayer adhan sound (FR-NT-02): 'default' | 'silent'. A bundled
-  /// adhan clip option needs a licensed audio asset (SRS O4) not present in
-  /// this build, so it isn't offered yet.
+  /// Per-prayer adhan sound (FR-NT-02): 'default' | 'silent' | 'custom'. A
+  /// bundled adhan clip option needs a licensed audio asset (SRS O4) not
+  /// present in this build, so it isn't offered yet — 'custom' instead lets
+  /// the user supply their own, via [notifySoundUri].
   static String notifySound(String prayerName) => 'notify_sound_$prayerName';
+
+  /// The `content://` URI backing a prayer's 'custom' [notifySound], picked
+  /// either from the system ringtone/notification picker or imported from an
+  /// arbitrary file (see `SoundPicker`). Unused for 'default'/'silent'.
+  static String notifySoundUri(String prayerName) =>
+      'notify_sound_uri_$prayerName';
 
   static const String dndDuringPrayer = 'dnd_during_prayer';
   static const String dndDurationMinutes = 'dnd_duration_minutes';
@@ -44,9 +49,20 @@ class SettingsKeys {
 
   /// Whether the user dismissed History's "days before you installed"
   /// notice for the empty tail before [firstLaunchDate].
-  static const String historyPreInstallDismissed = 'history_pre_install_dismissed';
+  static const String historyPreInstallDismissed =
+      'history_pre_install_dismissed';
 
   /// Whether the Home screen's Sunnah checklist is collapsed (SRS FR-SN —
   /// optional, so it can be tucked away without losing the toggles).
   static const String sunnahChecklistCollapsed = 'sunnah_checklist_collapsed';
+
+  /// Whether period-day tracking (opt-in, product decision 2026-09-07) is
+  /// turned on. Off by default so the feature stays invisible until wanted.
+  static const String periodTrackingEnabled = 'period_tracking_enabled';
+
+  /// Whether rawatib (sunnah) reminders (opt-in, product decision
+  /// 2026-09-08) are turned on. One global toggle, not per-item — off by
+  /// default so this new notification category doesn't surprise existing
+  /// users.
+  static const String sunnahRemindersEnabled = 'sunnah_reminders_enabled';
 }

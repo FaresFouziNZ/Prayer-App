@@ -5,6 +5,7 @@ import '../../../app/prayer_names.dart';
 import '../../../app/theme.dart';
 import '../../../domain/prayer_engine/prayer.dart';
 import '../../../domain/schedule/prayer_event.dart';
+import '../../../domain/tracker/prayer_excuse.dart';
 import '../../../domain/tracker/prayer_log_entry.dart';
 import '../../../domain/tracker/prayer_status.dart';
 import '../../../domain/tracker/tracker_rules.dart';
@@ -12,16 +13,18 @@ import '../../../l10n/app_localizations.dart';
 
 /// One row per prayer with its adhan time and logged status; tapping a row
 /// opens the logging sheet (SRS FR-TR-03: "one tap per prayer"). Re-opening
-/// an already-logged prayer edits it in place — status, note, or deletion
-/// (FR-TR-05, FR-TR-08). Dhuhr and Maghrib also offer combining with their
-/// jam' partner when travelling (FR-TR-06).
+/// an already-logged prayer edits it in place — status or deletion
+/// (FR-TR-05). Dhuhr and Maghrib also offer combining with their jam'
+/// partner when travelling (FR-TR-06).
 class TodayPrayerList extends StatelessWidget {
   final List<PrayerEvent> events;
   final Map<Prayer, PrayerLogEntry> logsByPrayer;
   final bool isFriday;
-  final void Function(Prayer prayer, PrayerStatus status, String? note) onLog;
+  final void Function(Prayer prayer, PrayerStatus status, PrayerExcuse? excuse)
+  onLog;
   final void Function(Prayer prayer) onDelete;
-  final void Function(Prayer first, Prayer second, PrayerStatus status) onCombine;
+  final void Function(Prayer first, Prayer second, PrayerStatus status)
+  onCombine;
 
   const TodayPrayerList({
     super.key,
@@ -43,39 +46,58 @@ class TodayPrayerList extends StatelessWidget {
       child: Column(
         children: [
           for (final (index, event) in events.indexed) ...[
-            if (index > 0) Divider(height: 1, indent: 72, color: scheme.outlineVariant),
-            Builder(builder: (context) {
-              final log = logsByPrayer[event.prayer];
-              final isJumuah = isFriday && event.prayer == Prayer.dhuhr;
-              final subtitleParts = [
-                l10n.adhanAtLabel(timeFormat.format(event.adhanAt)),
-                if (log?.note != null && log!.note!.isNotEmpty) log.note!,
-                if (log?.combinedWith != null)
-                  l10n.combinedWithLabel(
-                    PrayerNames.displayName(context, _parsePrayer(log!.combinedWith!)),
+            if (index > 0)
+              Divider(height: 1, indent: 72, color: scheme.outlineVariant),
+            Builder(
+              builder: (context) {
+                final log = logsByPrayer[event.prayer];
+                final isJumuah = isFriday && event.prayer == Prayer.dhuhr;
+                final subtitleParts = [
+                  l10n.adhanAtLabel(timeFormat.format(event.adhanAt)),
+                  if (log?.combinedWith != null)
+                    l10n.combinedWithLabel(
+                      PrayerNames.displayName(
+                        context,
+                        _parsePrayer(log!.combinedWith!),
+                      ),
+                    ),
+                ];
+                return ListTile(
+                  shape: const RoundedRectangleBorder(),
+                  leading: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: PrayerColors.containerOf(
+                      scheme,
+                      log?.status,
+                    ),
+                    foregroundColor: PrayerColors.onContainerOf(
+                      scheme,
+                      log?.status,
+                    ),
+                    child: Icon(PrayerColors.iconOf(log?.status), size: 22),
                   ),
-              ];
-              return ListTile(
-                shape: const RoundedRectangleBorder(),
-                leading: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: PrayerColors.containerOf(scheme, log?.status),
-                  foregroundColor: PrayerColors.onContainerOf(scheme, log?.status),
-                  child: Icon(PrayerColors.iconOf(log?.status), size: 22),
-                ),
-                title: Text(PrayerNames.displayName(context, event.prayer, isJumuah: isJumuah)),
-                subtitle: Text(subtitleParts.join(' · ')),
-                trailing: _StatusChip(status: log?.status),
-                onTap: () => _openLogSheet(context, event.prayer, log, isJumuah),
-              );
-            }),
+                  title: Text(
+                    PrayerNames.displayName(
+                      context,
+                      event.prayer,
+                      isJumuah: isJumuah,
+                    ),
+                  ),
+                  subtitle: Text(subtitleParts.join(' · ')),
+                  trailing: _StatusChip(status: log?.status),
+                  onTap: () =>
+                      _openLogSheet(context, event.prayer, log, isJumuah),
+                );
+              },
+            ),
           ],
         ],
       ),
     );
   }
 
-  Prayer _parsePrayer(String name) => Prayer.values.firstWhere((p) => p.name == name);
+  Prayer _parsePrayer(String name) =>
+      Prayer.values.firstWhere((p) => p.name == name);
 
   void _openLogSheet(
     BuildContext context,
@@ -86,13 +108,14 @@ class TodayPrayerList extends StatelessWidget {
     final partner = TrackerRules.combinablePartner(prayer);
     showModalBottomSheet<void>(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       builder: (context) => _LogSheet(
         prayer: prayer,
         isJumuah: isJumuah,
         existing: existing,
         combinePartner: partner,
-        onSave: (status, note) => onLog(prayer, status, note),
+        onSave: (status, excuse) => onLog(prayer, status, excuse),
         onDelete: existing == null ? null : () => onDelete(prayer),
         onCombine: partner == null
             ? null
@@ -107,7 +130,7 @@ class _LogSheet extends StatefulWidget {
   final bool isJumuah;
   final PrayerLogEntry? existing;
   final Prayer? combinePartner;
-  final void Function(PrayerStatus status, String? note) onSave;
+  final void Function(PrayerStatus status, PrayerExcuse? excuse) onSave;
   final VoidCallback? onDelete;
   final void Function(PrayerStatus status)? onCombine;
 
@@ -127,52 +150,80 @@ class _LogSheet extends StatefulWidget {
 
 class _LogSheetState extends State<_LogSheet> {
   late PrayerStatus? _status = widget.existing?.status;
-  late final _noteController = TextEditingController(text: widget.existing?.note);
+  late PrayerExcuse? _excuse = widget.existing?.excuse;
   bool _combining = false;
 
-  static const _combinableStatuses = [PrayerStatus.jamaah, PrayerStatus.onTimeAlone];
+  static const _combinableStatuses = [
+    PrayerStatus.jamaah,
+    PrayerStatus.onTimeAlone,
+  ];
+  static const _excusableStatuses = [PrayerStatus.late, PrayerStatus.missed];
 
-  @override
-  void dispose() {
-    _noteController.dispose();
-    super.dispose();
+  bool get _needsExcuse => _excusableStatuses.contains(_status);
+
+  /// Picking a status is the last tap needed — no separate Save button.
+  /// The combine checkbox sits *above* the status chips for exactly this
+  /// reason: it has to be set before the terminal tap, since there's no
+  /// later step left to change your mind in.
+  void _selectStatus(PrayerStatus status) {
+    setState(() {
+      _status = status;
+      if (!_excusableStatuses.contains(status)) _excuse = null;
+    });
+    _maybeCommit();
+  }
+
+  void _selectExcuse(PrayerExcuse excuse) {
+    setState(() => _excuse = excuse);
+    _maybeCommit();
+  }
+
+  void _toggleCombine(bool checked) {
+    setState(() {
+      _combining = checked;
+      if (_combining && !_combinableStatuses.contains(_status)) {
+        _status = null;
+      }
+    });
+    _maybeCommit();
+  }
+
+  void _maybeCommit() {
+    if (_status == null) return;
+    if (_combining) {
+      Navigator.of(context).pop();
+      widget.onCombine!(_status!);
+      return;
+    }
+    if (_needsExcuse && _excuse == null) return;
+    Navigator.of(context).pop();
+    widget.onSave(_status!, _needsExcuse ? _excuse : null);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final statusOptions = _combining ? _combinableStatuses : PrayerStatus.values;
+    final statusOptions = _combining
+        ? _combinableStatuses
+        : PrayerStatus.values;
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              PrayerNames.displayName(context, widget.prayer, isJumuah: widget.isJumuah),
+              PrayerNames.displayName(
+                context,
+                widget.prayer,
+                isJumuah: widget.isJumuah,
+              ),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final status in statusOptions)
-                  ChoiceChip(
-                    label: Text(_statusLabel(l10n, status)),
-                    selected: _status == status,
-                    onSelected: (_) => setState(() => _status = status),
-                  ),
-              ],
-            ),
             if (widget.onCombine != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
@@ -182,23 +233,42 @@ class _LogSheetState extends State<_LogSheet> {
                   ),
                 ),
                 value: _combining,
-                onChanged: (checked) => setState(() {
-                  _combining = checked ?? false;
-                  if (_combining && !_combinableStatuses.contains(_status)) {
-                    _status = null;
-                  }
-                }),
+                onChanged: (checked) => _toggleCombine(checked ?? false),
               ),
             ],
-            const SizedBox(height: 8),
-            TextField(
-              controller: _noteController,
-              decoration: InputDecoration(
-                labelText: l10n.noteOptionalLabel,
-                border: const OutlineInputBorder(),
-              ),
-              maxLines: 2,
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final status in statusOptions)
+                  ChoiceChip(
+                    label: Text(_statusLabel(l10n, status)),
+                    selected: _status == status,
+                    onSelected: (_) => _selectStatus(status),
+                  ),
+              ],
             ),
+            if (_needsExcuse) ...[
+              const SizedBox(height: 12),
+              Text(
+                l10n.reasonPromptLabel,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final excuse in PrayerExcuse.values)
+                    ChoiceChip(
+                      label: Text(_excuseLabel(l10n, excuse)),
+                      selected: _excuse == excuse,
+                      onSelected: (_) => _selectExcuse(excuse),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               children: [
@@ -215,21 +285,6 @@ class _LogSheetState extends State<_LogSheet> {
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(l10n.cancel),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _status == null
-                      ? null
-                      : () {
-                          Navigator.of(context).pop();
-                          if (_combining) {
-                            widget.onCombine!(_status!);
-                            return;
-                          }
-                          final note = _noteController.text.trim();
-                          widget.onSave(_status!, note.isEmpty ? null : note);
-                        },
-                  child: Text(l10n.save),
                 ),
               ],
             ),
@@ -249,6 +304,23 @@ class _LogSheetState extends State<_LogSheet> {
         return l10n.statusLate;
       case PrayerStatus.missed:
         return l10n.statusMissed;
+    }
+  }
+
+  String _excuseLabel(AppLocalizations l10n, PrayerExcuse excuse) {
+    switch (excuse) {
+      case PrayerExcuse.overslept:
+        return l10n.excuseOverslept;
+      case PrayerExcuse.busy:
+        return l10n.excuseBusy;
+      case PrayerExcuse.forgot:
+        return l10n.excuseForgot;
+      case PrayerExcuse.travel:
+        return l10n.excuseTravel;
+      case PrayerExcuse.sick:
+        return l10n.excuseSick;
+      case PrayerExcuse.other:
+        return l10n.excuseOther;
     }
   }
 }
@@ -278,9 +350,9 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: PrayerColors.onContainerOf(scheme, status),
-              fontWeight: FontWeight.w600,
-            ),
+          color: PrayerColors.onContainerOf(scheme, status),
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

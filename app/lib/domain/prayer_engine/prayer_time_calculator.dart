@@ -18,16 +18,18 @@ class PrayerTimeCalculator {
     adhan.CalculationParameters? calculationParameters,
     this.ramadanMode = false,
   }) : calculationParameters =
-            calculationParameters ?? PrayerConfig.defaultCalculationParameters();
+           calculationParameters ?? PrayerConfig.defaultCalculationParameters();
 
   PrayerDay computeForDate(DateTime date) {
     final params = calculationParameters.copyWith(
-      adjustments: Map<adhan.Prayer, int>.from(calculationParameters.adjustments),
+      adjustments: Map<adhan.Prayer, int>.from(
+        calculationParameters.adjustments,
+      ),
     );
     if (ramadanMode) {
       params.adjustments[adhan.Prayer.isha] =
           (params.adjustments[adhan.Prayer.isha] ?? 0) +
-              PrayerConfig.ramadanIshaAdjustmentMinutes;
+          PrayerConfig.ramadanIshaAdjustmentMinutes;
     }
 
     final times = adhan.PrayerTimes(

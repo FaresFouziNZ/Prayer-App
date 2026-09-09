@@ -19,7 +19,8 @@ class PeriodMetrics {
     required this.notLoggedCount,
   });
 
-  int get loggedCount => jamaahCount + onTimeAloneCount + lateCount + missedCount;
+  int get loggedCount =>
+      jamaahCount + onTimeAloneCount + lateCount + missedCount;
 
   double get jamaahRate => loggedCount == 0 ? 0 : jamaahCount / loggedCount;
 

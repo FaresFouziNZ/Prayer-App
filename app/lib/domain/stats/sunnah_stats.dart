@@ -20,13 +20,16 @@ class SunnahStats {
         item: days.isEmpty
             ? 0
             : days
-                    .where((day) => doneByDayAndItem[(
-                          DateTime(day.year, day.month, day.day),
-                          item,
-                        )] ==
-                        true)
-                    .length /
-                days.length,
+                      .where(
+                        (day) =>
+                            doneByDayAndItem[(
+                              DateTime(day.year, day.month, day.day),
+                              item,
+                            )] ==
+                            true,
+                      )
+                      .length /
+                  days.length,
     };
   }
 }

@@ -58,6 +58,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final periodDays = _resolveDays(today);
     final logsAsync = ref.watch(periodLogsProvider(periodDays));
     final sunnahAsync = ref.watch(periodSunnahProvider(periodDays));
+    final excludedDays = ref.watch(periodDaysProvider).value ?? const {};
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.statsTitle)),
@@ -69,14 +70,26 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               scrollDirection: Axis.horizontal,
               child: SegmentedButton<_StatsPeriod>(
                 segments: [
-                  ButtonSegment(value: _StatsPeriod.d7, label: Text(l10n.period7d)),
-                  ButtonSegment(value: _StatsPeriod.d30, label: Text(l10n.period30d)),
-                  ButtonSegment(value: _StatsPeriod.d90, label: Text(l10n.period90d)),
+                  ButtonSegment(
+                    value: _StatsPeriod.d7,
+                    label: Text(l10n.period7d),
+                  ),
+                  ButtonSegment(
+                    value: _StatsPeriod.d30,
+                    label: Text(l10n.period30d),
+                  ),
+                  ButtonSegment(
+                    value: _StatsPeriod.d90,
+                    label: Text(l10n.period90d),
+                  ),
                   ButtonSegment(
                     value: _StatsPeriod.hijriMonth,
                     label: Text(l10n.periodHijriMonth),
                   ),
-                  ButtonSegment(value: _StatsPeriod.all, label: Text(l10n.periodAll)),
+                  ButtonSegment(
+                    value: _StatsPeriod.all,
+                    label: Text(l10n.periodAll),
+                  ),
                 ],
                 selected: {_period},
                 onSelectionChanged: (selection) =>
@@ -87,7 +100,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           Expanded(
             child: logsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
+              error: (error, stack) =>
+                  Center(child: Text(l10n.errorLabel(error.toString()))),
               data: (logs) => sunnahAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) =>
@@ -97,6 +111,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   sunnahEntries: sunnahEntries,
                   today: today,
                   periodDays: periodDays,
+                  excludedDays: excludedDays,
                 ),
               ),
             ),
@@ -112,12 +127,14 @@ class _StatsBody extends StatelessWidget {
   final List<SunnahLogEntry> sunnahEntries;
   final DateTime today;
   final int? periodDays;
+  final Set<DateTime> excludedDays;
 
   const _StatsBody({
     required this.logs,
     required this.sunnahEntries,
     required this.today,
     required this.periodDays,
+    required this.excludedDays,
   });
 
   @override
@@ -127,17 +144,30 @@ class _StatsBody extends StatelessWidget {
     final start = periodDays != null
         ? today.subtract(Duration(days: periodDays! - 1))
         : (logs.isEmpty
-            ? today
-            : logs.map((l) => l.date).reduce((a, b) => a.isBefore(b) ? a : b));
-    final days = List.generate(
+              ? today
+              : logs
+                    .map((l) => l.date)
+                    .reduce((a, b) => a.isBefore(b) ? a : b));
+    // Period days (FR-EX-04) are dropped before computing the day-level
+    // stats, so they're skipped entirely for prayers and sunnah rather than
+    // counted as not-logged. The streak is prayer-based, not day-based, so
+    // it gets the unfiltered range instead — an unlogged prayer is already
+    // neutral there (never breaks the streak), which is exactly right for
+    // a period day too, while any prayer actually logged before the period
+    // began that day still counts (see Streak's doc comment).
+    final allDays = List.generate(
       today.difference(start).inDays + 1,
       (i) => start.add(Duration(days: i)),
     );
+    final days = allDays.where((day) => !excludedDays.contains(day)).toList();
 
     final overall = PeriodStats.compute(days: days, logs: logs);
     final perPrayer = PeriodStats.computePerPrayer(days: days, logs: logs);
-    final streak = Streak.compute(days: days, logs: logs);
-    final sunnahRates = SunnahStats.completionRate(days: days, entries: sunnahEntries);
+    final streak = Streak.compute(days: allDays, logs: logs);
+    final sunnahRates = SunnahStats.completionRate(
+      days: days,
+      entries: sunnahEntries,
+    );
     final percent = NumberFormat.percentPattern();
 
     return ListView(
@@ -151,21 +181,30 @@ class _StatsBody extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _StreakStat(label: l10n.currentStreakLabel, value: streak.current),
+                _StreakStat(
+                  label: l10n.currentStreakLabel,
+                  value: streak.current,
+                ),
                 _StreakStat(label: l10n.bestStreakLabel, value: streak.best),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
-        Text(l10n.perPrayerLabel, style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          l10n.perPrayerLabel,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         for (final prayer in Prayer.values)
           _MetricsCard(
             title: PrayerNames.displayName(context, prayer),
             metrics: perPrayer[prayer]!,
           ),
         const SizedBox(height: 12),
-        Text(l10n.sunnahCompletionTitle, style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          l10n.sunnahCompletionTitle,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         Card(
           child: Column(
             children: [
@@ -204,41 +243,70 @@ class _StreakStat extends StatelessWidget {
         Text('$value', style: Theme.of(context).textTheme.headlineMedium),
         Text(
           label,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: scheme.onSurfaceVariant),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
         ),
       ],
     );
   }
 }
 
-class _RateBar extends StatelessWidget {
-  final String label;
+class _RateCircle extends StatelessWidget {
+  final String tooltip;
+  final String caption;
   final double value;
   final Color color;
 
-  const _RateBar({required this.label, required this.value, required this.color});
+  const _RateCircle({
+    required this.tooltip,
+    required this.caption,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: value.clamp(0, 1),
-            minHeight: 8,
-            backgroundColor: scheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation(color),
+    final percent = NumberFormat.percentPattern().format(value.clamp(0, 1));
+    return Tooltip(
+      message: tooltip,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    value: value.clamp(0, 1),
+                    strokeWidth: 7,
+                    strokeCap: StrokeCap.round,
+                    backgroundColor: scheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation(color),
+                  ),
+                ),
+                Text(
+                  percent,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(
+            caption,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -263,16 +331,26 @@ class _MetricsCard extends StatelessWidget {
           children: [
             Text(title, style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 12),
-            _RateBar(
-              label: l10n.jamaahRateLabel(percent.format(metrics.jamaahRate)),
-              value: metrics.jamaahRate,
-              color: scheme.primary,
-            ),
-            const SizedBox(height: 8),
-            _RateBar(
-              label: l10n.onTimeRateLabel(percent.format(metrics.onTimeRate)),
-              value: metrics.onTimeRate,
-              color: scheme.tertiary,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _RateCircle(
+                  tooltip: l10n.jamaahRateLabel(
+                    percent.format(metrics.jamaahRate),
+                  ),
+                  caption: l10n.statusJamaah,
+                  value: metrics.jamaahRate,
+                  color: scheme.primary,
+                ),
+                _RateCircle(
+                  tooltip: l10n.onTimeRateLabel(
+                    percent.format(metrics.onTimeRate),
+                  ),
+                  caption: l10n.onTimeCaptionLabel,
+                  value: metrics.onTimeRate,
+                  color: scheme.tertiary,
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Text(
@@ -281,10 +359,9 @@ class _MetricsCard extends StatelessWidget {
                 metrics.missedCount,
                 metrics.notLoggedCount,
               ),
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ),

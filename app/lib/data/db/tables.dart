@@ -63,15 +63,18 @@ class PrayerLogTable extends Table {
 
   /// Prayer name or null.
   TextColumn get combinedWith => text().nullable()();
-  TextColumn get note => text().nullable()();
+
+  /// overslept|busy|forgot|travel|sick|other, only meaningful for
+  /// late|missed.
+  TextColumn get excuse => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {date, prayer},
-      ];
+    {date, prayer},
+  ];
 }
 
 @DataClassName('SunnahLogRow')
@@ -118,4 +121,20 @@ class QadaOpeningBalanceTable extends Table {
 
   @override
   Set<Column> get primaryKey => {prayer};
+}
+
+/// Days marked as a menstrual period day (opt-in, product decision
+/// 2026-09-07): a woman is not obligated to pray on these days, so they're
+/// excused from the tracker rather than counted as missed/not-logged.
+/// Presence of a row means the day is marked; there's nothing else to store.
+@DataClassName('PeriodDayRow')
+class PeriodDayTable extends Table {
+  @override
+  String get tableName => 'period_day';
+
+  /// 'YYYY-MM-DD' local date.
+  TextColumn get date => text()();
+
+  @override
+  Set<Column> get primaryKey => {date};
 }

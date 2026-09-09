@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:adhan_dart/adhan_dart.dart' as adhan;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,7 @@ import '../data/backup/backup_service.dart';
 import '../data/db/app_database.dart';
 import '../data/db/codecs.dart';
 import '../data/db/repositories/iqamah_profile_repository.dart';
+import '../data/db/repositories/period_repository.dart';
 import '../data/db/repositories/prayer_log_repository.dart';
 import '../data/db/repositories/qada_repository.dart';
 import '../data/db/repositories/settings_repository.dart';
@@ -19,7 +22,10 @@ import '../domain/schedule/prayer_event.dart';
 import '../domain/schedule/schedule_builder.dart';
 import '../domain/tracker/prayer_log_entry.dart';
 import '../domain/tracker/sunnah.dart';
+import '../platform/dnd/dnd_alarm_scheduler.dart';
+import '../platform/live_notification/live_notification_scheduler.dart';
 import '../platform/notifications/notification_scheduler.dart';
+import '../platform/notifications/sunnah_notification_scheduler.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -47,6 +53,10 @@ final qadaRepositoryProvider = Provider<QadaRepository>(
   (ref) => QadaRepository(ref.watch(appDatabaseProvider)),
 );
 
+final periodRepositoryProvider = Provider<PeriodRepository>(
+  (ref) => PeriodRepository(ref.watch(appDatabaseProvider)),
+);
+
 final backupServiceProvider = Provider<BackupService>(
   (ref) => BackupService(ref.watch(appDatabaseProvider)),
 );
@@ -57,6 +67,28 @@ final backupServiceProvider = Provider<BackupService>(
 final notificationSchedulerProvider = Provider<NotificationScheduler>(
   (ref) => FlutterLocalNotificationsScheduler(),
 );
+
+/// Android's live-countdown notification (SRS FR-LA-07); a no-op on other
+/// platforms, whose own live surface (iOS's Live Activity) isn't built yet.
+final liveNotificationSchedulerProvider = Provider<LiveNotificationScheduler>(
+  (ref) => Platform.isAndroid
+      ? AndroidLiveNotificationScheduler()
+      : const UnimplementedLiveNotificationScheduler(),
+);
+
+/// Auto-DND at iqamah (SRS FR-NT-08); a single instance so
+/// `android_alarm_manager_plus`'s native service is only started once.
+/// Android-only per C2 — [NotificationCoordinator] guards every call.
+final dndAlarmSchedulerProvider = Provider<DndAlarmScheduler>(
+  (ref) => DndAlarmScheduler(),
+);
+
+/// Rawatib (sunnah) reminders (SRS FR-SN) — ordinary `flutter_local_notifications`
+/// one-shot scheduling, cross-platform like the main [notificationSchedulerProvider].
+final sunnahNotificationSchedulerProvider =
+    Provider<SunnahNotificationScheduler>(
+      (ref) => FlutterLocalNotificationsSunnahScheduler(),
+    );
 
 /// Today's date at midnight, local time.
 final todayProvider = Provider<DateTime>((ref) {
@@ -90,9 +122,9 @@ class DaySnapshot {
 /// Jeddah — used only until FR-PT-03 location settings have a value.
 const _defaultCoordinates = adhan.Coordinates(21.5433, 39.1728);
 
-/// Reads the location settings written by FR-PT-03 (automatic GPS fix or
-/// manual coordinates, see [LocationService]/Settings), falling back to
-/// Jeddah so the app is usable before any location has been set.
+/// Reads the GPS fix written by FR-PT-03 (see [LocationService]/Settings),
+/// falling back to Jeddah so the app is usable before any location has
+/// been set.
 final coordinatesProvider = FutureProvider<adhan.Coordinates>((ref) async {
   final settings = ref.watch(settingsRepositoryProvider);
   final lat = await settings.getDouble(SettingsKeys.latitude);
@@ -101,8 +133,19 @@ final coordinatesProvider = FutureProvider<adhan.Coordinates>((ref) async {
   return adhan.Coordinates(lat, lng);
 });
 
-final daySnapshotProvider =
-    FutureProvider.family<DaySnapshot, DateTime>((ref, date) async {
+/// The city name shown on Home so the user knows which location today's
+/// prayer times are computed for (FR-PT-03) — null until a GPS fix has
+/// been resolved, in which case the UI shows a "Jeddah (default)"-style
+/// fallback matching [_defaultCoordinates].
+final locationLabelProvider = FutureProvider<String?>((ref) async {
+  final settings = ref.watch(settingsRepositoryProvider);
+  return settings.getString(SettingsKeys.locationLabel);
+});
+
+final daySnapshotProvider = FutureProvider.family<DaySnapshot, DateTime>((
+  ref,
+  date,
+) async {
   final settings = ref.watch(settingsRepositoryProvider);
   final profiles = ref.watch(iqamahProfileRepositoryProvider);
   final coordinates = await ref.watch(coordinatesProvider.future);
@@ -116,7 +159,8 @@ final daySnapshotProvider =
       : IqamahProfileRepository.normalProfileId;
   final activeProfileId =
       await settings.getString(profileSettingKey) ?? defaultProfileId;
-  final activeProfile = await profiles.getById(activeProfileId) ??
+  final activeProfile =
+      await profiles.getById(activeProfileId) ??
       IqamahProfile(
         id: IqamahProfileRepository.normalProfileId,
         name: 'Normal',
@@ -126,10 +170,10 @@ final daySnapshotProvider =
 
   final closingOffsetMinutes =
       await settings.getInt(SettingsKeys.closingOffsetMinutes) ??
-          PrayerConfig.defaultClosingOffsetMinutes;
+      PrayerConfig.defaultClosingOffsetMinutes;
   final preAdhanOffsetMinutes =
       await settings.getInt(SettingsKeys.preAdhanOffsetMinutes) ??
-          PrayerConfig.defaultPreAdhanOffsetMinutes;
+      PrayerConfig.defaultPreAdhanOffsetMinutes;
 
   final calculator = PrayerTimeCalculator(
     coordinates: coordinates,
@@ -180,7 +224,8 @@ final firstLaunchDateProvider = FutureProvider<DateTime?>((ref) async {
 /// Whether the user dismissed History's "days before you installed" notice.
 final historyPreInstallDismissedProvider = FutureProvider<bool>((ref) async {
   final settings = ref.watch(settingsRepositoryProvider);
-  return await settings.getBool(SettingsKeys.historyPreInstallDismissed) ?? false;
+  return await settings.getBool(SettingsKeys.historyPreInstallDismissed) ??
+      false;
 });
 
 /// Whether the Home screen's Sunnah checklist is collapsed (SRS FR-SN-01/02
@@ -188,6 +233,28 @@ final historyPreInstallDismissedProvider = FutureProvider<bool>((ref) async {
 final sunnahChecklistCollapsedProvider = FutureProvider<bool>((ref) async {
   final settings = ref.watch(settingsRepositoryProvider);
   return await settings.getBool(SettingsKeys.sunnahChecklistCollapsed) ?? false;
+});
+
+/// Whether period-day tracking is turned on (opt-in, product decision
+/// 2026-09-07) — off by default so the feature stays invisible to users
+/// who don't need it.
+final periodTrackingEnabledProvider = FutureProvider<bool>((ref) async {
+  final settings = ref.watch(settingsRepositoryProvider);
+  return await settings.getBool(SettingsKeys.periodTrackingEnabled) ?? false;
+});
+
+/// Whether [date] is marked as a period day, live-updated like
+/// [dayLogsProvider].
+final dayIsPeriodProvider = StreamProvider.family<bool, DateTime>((ref, date) {
+  return ref.watch(periodRepositoryProvider).watchIsPeriodDay(date);
+});
+
+/// Every day ever marked as a period day, for excluding them from Stats
+/// (FR-ST) and Qada (FR-QD-01) — both compute over spans that can be
+/// unbounded ("all time"), so this watches the whole table rather than a
+/// fixed window.
+final periodDaysProvider = StreamProvider<Set<DateTime>>((ref) {
+  return ref.watch(periodRepositoryProvider).watchAll();
 });
 
 /// The last 30 days of logs, for the History screen's day list.
@@ -205,8 +272,10 @@ final historyLogsProvider = StreamProvider<List<PrayerLogEntry>>((ref) {
 /// (not a one-shot [FutureProvider]) so Stats picks up edits made after the
 /// screen was first opened, instead of showing whatever was true the first
 /// time this period was viewed.
-final periodLogsProvider =
-    StreamProvider.family<List<PrayerLogEntry>, int?>((ref, periodDays) {
+final periodLogsProvider = StreamProvider.family<List<PrayerLogEntry>, int?>((
+  ref,
+  periodDays,
+) {
   final repo = ref.watch(prayerLogRepositoryProvider);
   final today = ref.watch(todayProvider);
   final start = periodDays == null
@@ -224,8 +293,10 @@ final iqamahProfilesProvider = FutureProvider<List<IqamahProfile>>((ref) {
 /// Sunnah entries for the same statistics period (SRS FR-ST-04). A
 /// [StreamProvider] for the same reason as [periodLogsProvider] — Stats
 /// should reflect a toggle made after the screen was first opened.
-final periodSunnahProvider =
-    StreamProvider.family<List<SunnahLogEntry>, int?>((ref, periodDays) {
+final periodSunnahProvider = StreamProvider.family<List<SunnahLogEntry>, int?>((
+  ref,
+  periodDays,
+) {
   final repo = ref.watch(sunnahRepositoryProvider);
   return repo.watchAll().map((all) {
     if (periodDays == null) return all;

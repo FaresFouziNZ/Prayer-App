@@ -43,24 +43,33 @@ void main() {
     expect(balances[Prayer.dhuhr], 0);
   });
 
-  test('late only counts when lateCountsAsQada is on (AC-QD-2)', () {
+  test('late prayers never count toward qada', () {
     final logs = [
       _log(Prayer.asr, PrayerStatus.late, DateTime(2026, 1, 1)),
     ];
 
-    final withoutLate = QadaBalance.compute(
+    final balances = QadaBalance.compute(
       logs: logs,
       payments: const [],
       openingBalances: const {},
-    );
-    final withLate = QadaBalance.compute(
-      logs: logs,
-      payments: const [],
-      openingBalances: const {},
-      lateCountsAsQada: true,
     );
 
-    expect(withoutLate[Prayer.asr], 0);
-    expect(withLate[Prayer.asr], 1);
+    expect(balances[Prayer.asr], 0);
+  });
+
+  test('a missed record on an excluded (period) day does not count', () {
+    final logs = [
+      _log(Prayer.dhuhr, PrayerStatus.missed, DateTime(2026, 1, 1)),
+      _log(Prayer.dhuhr, PrayerStatus.missed, DateTime(2026, 1, 2)),
+    ];
+
+    final balances = QadaBalance.compute(
+      logs: logs,
+      payments: const [],
+      openingBalances: const {},
+      excludedDays: {DateTime(2026, 1, 1)},
+    );
+
+    expect(balances[Prayer.dhuhr], 1);
   });
 }

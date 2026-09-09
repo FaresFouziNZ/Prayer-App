@@ -5,14 +5,17 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [
-  SettingsTable,
-  IqamahProfileTable,
-  PrayerLogTable,
-  SunnahLogTable,
-  QadaPaymentTable,
-  QadaOpeningBalanceTable,
-])
+@DriftDatabase(
+  tables: [
+    SettingsTable,
+    IqamahProfileTable,
+    PrayerLogTable,
+    SunnahLogTable,
+    QadaPaymentTable,
+    QadaOpeningBalanceTable,
+    PeriodDayTable,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 

@@ -16,7 +16,9 @@ class SunnahRepository {
     required bool done,
     DateTime? now,
   }) {
-    return _db.into(_db.sunnahLogTable).insertOnConflictUpdate(
+    return _db
+        .into(_db.sunnahLogTable)
+        .insertOnConflictUpdate(
           SunnahLogTableCompanion.insert(
             date: Codecs.dateKey(date),
             item: Codecs.sunnahItemToDb(item),
@@ -27,9 +29,9 @@ class SunnahRepository {
   }
 
   Future<List<SunnahLogEntry>> getForDay(DateTime date) async {
-    final rows = await (_db.select(_db.sunnahLogTable)
-          ..where((t) => t.date.equals(Codecs.dateKey(date))))
-        .get();
+    final rows = await (_db.select(
+      _db.sunnahLogTable,
+    )..where((t) => t.date.equals(Codecs.dateKey(date)))).get();
     return rows.map(_toDomain).toList();
   }
 
@@ -46,9 +48,10 @@ class SunnahRepository {
   }
 
   Stream<List<SunnahLogEntry>> watchAll() {
-    return _db.select(_db.sunnahLogTable).watch().map(
-          (rows) => rows.map(_toDomain).toList(),
-        );
+    return _db
+        .select(_db.sunnahLogTable)
+        .watch()
+        .map((rows) => rows.map(_toDomain).toList());
   }
 
   SunnahLogEntry _toDomain(SunnahLogRow row) {
