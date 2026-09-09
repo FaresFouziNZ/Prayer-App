@@ -20,7 +20,8 @@ class PrayerApp extends ConsumerStatefulWidget {
   ConsumerState<PrayerApp> createState() => _PrayerAppState();
 }
 
-class _PrayerAppState extends ConsumerState<PrayerApp> with WidgetsBindingObserver {
+class _PrayerAppState extends ConsumerState<PrayerApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -36,23 +37,25 @@ class _PrayerAppState extends ConsumerState<PrayerApp> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      NotificationCoordinator.scheduleUpcomingWindow(ProviderScope.containerOf(context));
+      NotificationCoordinator.scheduleUpcomingWindow(
+        ProviderScope.containerOf(context),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final languageCodeAsync = ref.watch(_languageCodeProvider);
+    final themeModeAsync = ref.watch(_themeModeProvider);
 
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode:
+          themeModeAsync.whenOrNull(data: (mode) => mode) ?? ThemeMode.system,
       routerConfig: appRouter,
-      locale: languageCodeAsync.whenOrNull(
-        data: (code) => Locale(code),
-      ),
+      locale: languageCodeAsync.whenOrNull(data: (code) => Locale(code)),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -79,4 +82,20 @@ final _languageCodeProvider = StreamProvider<String>((ref) {
     intl.Intl.defaultLocale = resolved;
     return resolved;
   });
+});
+
+/// SRS FR-UI-02: the app follows the system theme by default, but a manual
+/// override ('light'/'dark') stored under [SettingsKeys.themeMode] wins over
+/// it — anything else (including no value yet) means "follow system".
+final _themeModeProvider = StreamProvider<ThemeMode>((ref) {
+  final settings = ref.watch(settingsRepositoryProvider);
+  return settings
+      .watchString(SettingsKeys.themeMode)
+      .map(
+        (mode) => switch (mode) {
+          'light' => ThemeMode.light,
+          'dark' => ThemeMode.dark,
+          _ => ThemeMode.system,
+        },
+      );
 });

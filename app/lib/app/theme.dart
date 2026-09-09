@@ -72,8 +72,12 @@ class AppTheme {
       headlineMedium: base.textTheme.headlineMedium?.copyWith(
         fontWeight: FontWeight.w700,
       ),
-      titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-      titleMedium: base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      titleLarge: base.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+      titleMedium: base.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
       labelLarge: base.textTheme.labelLarge?.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
@@ -91,7 +95,9 @@ class AppTheme {
         backgroundColor: scheme.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        titleTextStyle: textTheme.headlineMedium?.copyWith(color: scheme.onSurface),
+        titleTextStyle: textTheme.headlineMedium?.copyWith(
+          color: scheme.onSurface,
+        ),
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
@@ -147,7 +153,8 @@ class AppTheme {
       checkboxTheme: CheckboxThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? scheme.primary : null,
+          (states) =>
+              states.contains(WidgetState.selected) ? scheme.primary : null,
         ),
       ),
       dividerTheme: DividerThemeData(color: scheme.outlineVariant, space: 32),
@@ -170,15 +177,16 @@ class PrayerColors {
   const PrayerColors._();
 
   static Color of(ColorScheme scheme, PrayerStatus? status) => switch (status) {
-        null => scheme.outline,
-        PrayerStatus.jamaah => scheme.primary,
-        PrayerStatus.onTimeAlone => scheme.tertiary,
-        PrayerStatus.late => scheme.secondary,
-        PrayerStatus.missed => scheme.error,
-      };
+    null => scheme.outline,
+    PrayerStatus.jamaah => scheme.primary,
+    PrayerStatus.onTimeAlone => scheme.tertiary,
+    PrayerStatus.late => scheme.secondary,
+    PrayerStatus.missed => scheme.error,
+  };
 
   /// Soft background tint for the status pill/icon container.
-  static Color containerOf(ColorScheme scheme, PrayerStatus? status) => switch (status) {
+  static Color containerOf(ColorScheme scheme, PrayerStatus? status) =>
+      switch (status) {
         null => scheme.surfaceContainerHighest,
         PrayerStatus.jamaah => scheme.primaryContainer,
         PrayerStatus.onTimeAlone => scheme.tertiaryContainer,
@@ -187,7 +195,8 @@ class PrayerColors {
       };
 
   /// Foreground color for text/icons drawn on [containerOf].
-  static Color onContainerOf(ColorScheme scheme, PrayerStatus? status) => switch (status) {
+  static Color onContainerOf(ColorScheme scheme, PrayerStatus? status) =>
+      switch (status) {
         null => scheme.onSurfaceVariant,
         PrayerStatus.jamaah => scheme.onPrimaryContainer,
         PrayerStatus.onTimeAlone => scheme.onTertiaryContainer,
@@ -196,10 +205,10 @@ class PrayerColors {
       };
 
   static IconData iconOf(PrayerStatus? status) => switch (status) {
-        null => Icons.radio_button_unchecked,
-        PrayerStatus.jamaah => Icons.groups_rounded,
-        PrayerStatus.onTimeAlone => Icons.check_circle_rounded,
-        PrayerStatus.late => Icons.watch_later_rounded,
-        PrayerStatus.missed => Icons.cancel_rounded,
-      };
+    null => Icons.radio_button_unchecked,
+    PrayerStatus.jamaah => Icons.groups_rounded,
+    PrayerStatus.onTimeAlone => Icons.check_circle_rounded,
+    PrayerStatus.late => Icons.watch_later_rounded,
+    PrayerStatus.missed => Icons.cancel_rounded,
+  };
 }

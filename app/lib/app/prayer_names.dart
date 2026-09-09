@@ -48,7 +48,9 @@ class PrayerNames {
     final script = useJumuah ? _jumuahArabicScript : _arabicScript[prayer]!;
     if (isArabicLocale) return script;
 
-    final translit = useJumuah ? l10n.prayerJumuah : transliteration(l10n, prayer);
+    final translit = useJumuah
+        ? l10n.prayerJumuah
+        : transliteration(l10n, prayer);
     return '$script ($translit)';
   }
 

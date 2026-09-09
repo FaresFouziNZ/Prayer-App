@@ -20,27 +20,46 @@ final appRouter = GoRouter(
       builder: (context, state, navigationShell) =>
           _AppShell(navigationShell: navigationShell),
       branches: [
-        StatefulShellBranch(routes: [
-          GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: '/history',
-            builder: (context, state) => const HistoryScreen(),
-          ),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(path: '/stats', builder: (context, state) => const StatsScreen()),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(path: '/qada', builder: (context, state) => const QadaScreen()),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
-          ),
-        ]),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/home',
+              builder: (context, state) => const HomeScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/history',
+              builder: (context, state) => const HistoryScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/stats',
+              builder: (context, state) => const StatsScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/qada',
+              builder: (context, state) => const QadaScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/settings',
+              builder: (context, state) => const SettingsScreen(),
+            ),
+          ],
+        ),
       ],
     ),
   ],

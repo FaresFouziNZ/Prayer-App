@@ -7,14 +7,16 @@ class SettingsRepository {
   SettingsRepository(this._db);
 
   Future<String?> getString(String key) async {
-    final row = await (_db.select(_db.settingsTable)
-          ..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.settingsTable,
+    )..where((t) => t.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
   Future<void> setString(String key, String value) {
-    return _db.into(_db.settingsTable).insertOnConflictUpdate(
+    return _db
+        .into(_db.settingsTable)
+        .insertOnConflictUpdate(
           SettingsTableCompanion.insert(key: key, value: value),
         );
   }
@@ -24,7 +26,8 @@ class SettingsRepository {
     return value == null ? null : int.tryParse(value);
   }
 
-  Future<void> setInt(String key, int value) => setString(key, value.toString());
+  Future<void> setInt(String key, int value) =>
+      setString(key, value.toString());
 
   Future<double?> getDouble(String key) async {
     final value = await getString(key);
