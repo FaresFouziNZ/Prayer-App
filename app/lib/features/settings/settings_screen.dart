@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/notification_coordinator.dart';
 import '../../app/providers.dart';
 import '../../config/prayer_config.dart';
 import '../../config/settings_keys.dart';
@@ -30,7 +31,8 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: valuesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
+        error: (error, stack) =>
+            Center(child: Text(l10n.errorLabel(error.toString()))),
         data: (values) => ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
@@ -38,33 +40,12 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.location_on_rounded,
               title: l10n.locationSectionLabel,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                  child: SegmentedButton<String>(
-                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                    segments: [
-                      ButtonSegment(value: 'automatic', label: Text(l10n.automaticGpsLabel)),
-                      ButtonSegment(value: 'manual', label: Text(l10n.manualLabel)),
-                    ],
-                    selected: {values.locationMode},
-                    onSelectionChanged: (selection) =>
-                        _setString(ref, SettingsKeys.locationMode, selection.first),
-                  ),
+                ListTile(
+                  title: Text(l10n.useCurrentLocationLabel),
+                  subtitle: Text(values.locationLabel ?? l10n.noFixYetLabel),
+                  trailing: const Icon(Icons.my_location),
+                  onTap: () => _useCurrentLocation(context, ref),
                 ),
-                if (values.locationMode == 'automatic')
-                  ListTile(
-                    title: Text(l10n.useCurrentLocationLabel),
-                    subtitle: Text(values.locationLabel ?? l10n.noFixYetLabel),
-                    trailing: const Icon(Icons.my_location),
-                    onTap: () => _useCurrentLocation(context, ref),
-                  )
-                else
-                  _ManualLocationForm(
-                    latitude: values.latitude,
-                    longitude: values.longitude,
-                    label: values.locationLabel,
-                    onSave: (lat, lng, label) => _saveManualLocation(ref, lat, lng, label),
-                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -76,26 +57,34 @@ class SettingsScreen extends ConsumerWidget {
                   title: Text(l10n.ramadanModeLabel),
                   subtitle: Text(l10n.ramadanModeSubtitle),
                   value: values.ramadanMode,
-                  onChanged: (value) => _setBool(ref, SettingsKeys.ramadanMode, value),
+                  onChanged: (value) =>
+                      _setBool(ref, SettingsKeys.ramadanMode, value),
                 ),
                 profilesAsync.when(
                   loading: () => const SizedBox.shrink(),
-                  error: (error, stack) => Text(l10n.errorLabel(error.toString())),
+                  error: (error, stack) =>
+                      Text(l10n.errorLabel(error.toString())),
                   data: (profiles) => Column(
                     children: [
                       _ProfilePicker(
                         label: l10n.normalProfileLabel,
                         profiles: profiles,
                         selectedId: values.normalProfileId,
-                        onChanged: (id) =>
-                            _setString(ref, SettingsKeys.normalIqamahProfileId, id),
+                        onChanged: (id) => _setString(
+                          ref,
+                          SettingsKeys.normalIqamahProfileId,
+                          id,
+                        ),
                       ),
                       _ProfilePicker(
                         label: l10n.ramadanProfileLabel,
                         profiles: profiles,
                         selectedId: values.ramadanProfileId,
-                        onChanged: (id) =>
-                            _setString(ref, SettingsKeys.ramadanIqamahProfileId, id),
+                        onChanged: (id) => _setString(
+                          ref,
+                          SettingsKeys.ramadanIqamahProfileId,
+                          id,
+                        ),
                       ),
                     ],
                   ),
@@ -105,13 +94,16 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: Text(l10n.manageProfilesSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const IqamahProfilesScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const IqamahProfilesScreen(),
+                    ),
                   ),
                 ),
                 _StepperTile(
                   title: l10n.closingOffsetLabel,
                   value: values.closingOffsetMinutes,
-                  onChanged: (v) => _setInt(ref, SettingsKeys.closingOffsetMinutes, v),
+                  onChanged: (v) =>
+                      _setInt(ref, SettingsKeys.closingOffsetMinutes, v),
                 ),
               ],
             ),
@@ -123,13 +115,29 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _SettingsGroup(
-              icon: Icons.balance_rounded,
-              title: l10n.qadaSectionLabel,
+              icon: Icons.nights_stay_rounded,
+              title: l10n.sunnahRemindersSectionLabel,
               children: [
                 SwitchListTile(
-                  title: Text(l10n.lateCountsAsQadaLabel),
-                  value: values.lateCountsAsQada,
-                  onChanged: (value) => _setBool(ref, SettingsKeys.lateCountsAsQada, value),
+                  title: Text(l10n.sunnahRemindersEnabledLabel),
+                  subtitle: Text(l10n.sunnahRemindersEnabledSubtitle),
+                  value: values.sunnahRemindersEnabled,
+                  onChanged: (value) =>
+                      _setSunnahRemindersEnabled(context, ref, value),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _SettingsGroup(
+              icon: Icons.water_drop_outlined,
+              title: l10n.periodTrackingSectionLabel,
+              children: [
+                SwitchListTile(
+                  title: Text(l10n.periodTrackingEnabledLabel),
+                  subtitle: Text(l10n.periodTrackingEnabledSubtitle),
+                  value: values.periodTrackingEnabled,
+                  onChanged: (value) =>
+                      _setBool(ref, SettingsKeys.periodTrackingEnabled, value),
                 ),
               ],
             ),
@@ -138,17 +146,35 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.palette_rounded,
               title: l10n.appearanceSectionLabel,
               children: [
-                ListTile(
-                  title: Text(l10n.languageLabel),
-                  trailing: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'en', label: Text('English')),
-                      ButtonSegment(value: 'ar', label: Text('العربية')),
-                    ],
-                    selected: {values.languageCode},
-                    onSelectionChanged: (selection) =>
-                        _setString(ref, SettingsKeys.languageCode, selection.first),
-                  ),
+                _SegmentedSettingTile<String>(
+                  label: l10n.languageLabel,
+                  segments: const [
+                    ButtonSegment(value: 'en', label: Text('English')),
+                    ButtonSegment(value: 'ar', label: Text('العربية')),
+                  ],
+                  selected: {values.languageCode},
+                  onChanged: (value) =>
+                      _setString(ref, SettingsKeys.languageCode, value),
+                ),
+                _SegmentedSettingTile<String>(
+                  label: l10n.themeLabel,
+                  segments: [
+                    ButtonSegment(
+                      value: 'system',
+                      label: Text(l10n.themeSystemLabel),
+                    ),
+                    ButtonSegment(
+                      value: 'light',
+                      label: Text(l10n.themeLightLabel),
+                    ),
+                    ButtonSegment(
+                      value: 'dark',
+                      label: Text(l10n.themeDarkLabel),
+                    ),
+                  ],
+                  selected: {values.themeMode},
+                  onChanged: (value) =>
+                      _setString(ref, SettingsKeys.themeMode, value),
                 ),
               ],
             ),
@@ -180,39 +206,34 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _useCurrentLocation(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final fix = await LocationService().getCurrentFix();
+      final locationService = LocationService();
+      final fix = await locationService.getCurrentFix();
+      final cityName = await locationService.resolveCityName(
+        fix.latitude,
+        fix.longitude,
+      );
       final settings = ref.read(settingsRepositoryProvider);
-      await settings.setString(SettingsKeys.locationMode, 'automatic');
       await settings.setDouble(SettingsKeys.latitude, fix.latitude);
       await settings.setDouble(SettingsKeys.longitude, fix.longitude);
       await settings.setString(
         SettingsKeys.locationLabel,
-        '${fix.latitude.toStringAsFixed(4)}, ${fix.longitude.toStringAsFixed(4)}',
+        cityName ??
+            '${fix.latitude.toStringAsFixed(4)}, ${fix.longitude.toStringAsFixed(4)}',
       );
       _invalidateDerived(ref);
     } on LocationServiceDisabledException {
-      if (context.mounted) _showError(context, l10n.locationServicesDisabledError);
+      if (context.mounted)
+        _showError(context, l10n.locationServicesDisabledError);
     } on LocationPermissionDeniedException {
-      if (context.mounted) _showError(context, l10n.locationPermissionDeniedError);
+      if (context.mounted)
+        _showError(context, l10n.locationPermissionDeniedError);
     }
   }
 
   void _showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _saveManualLocation(
-    WidgetRef ref,
-    double lat,
-    double lng,
-    String label,
-  ) async {
-    final settings = ref.read(settingsRepositoryProvider);
-    await settings.setString(SettingsKeys.locationMode, 'manual');
-    await settings.setDouble(SettingsKeys.latitude, lat);
-    await settings.setDouble(SettingsKeys.longitude, lng);
-    await settings.setString(SettingsKeys.locationLabel, label);
-    _invalidateDerived(ref);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _setBool(WidgetRef ref, String key, bool value) async {
@@ -230,10 +251,29 @@ class SettingsScreen extends ConsumerWidget {
     _invalidateDerived(ref);
   }
 
+  /// Unlike the plain `_set*` helpers above, this re-schedules right away
+  /// (like [NotificationSettingsSection] does for its own toggles) rather
+  /// than waiting for the next app resume — flipping this on should let the
+  /// user see reminders get armed immediately, not on their next cold start.
+  Future<void> _setSunnahRemindersEnabled(
+    BuildContext context,
+    WidgetRef ref,
+    bool value,
+  ) async {
+    final container = ProviderScope.containerOf(context);
+    await ref
+        .read(settingsRepositoryProvider)
+        .setBool(SettingsKeys.sunnahRemindersEnabled, value);
+    _invalidateDerived(ref);
+    await NotificationCoordinator.scheduleUpcomingWindow(container);
+  }
+
   void _invalidateDerived(WidgetRef ref) {
     ref.invalidate(_settingsValuesProvider);
     ref.invalidate(coordinatesProvider);
     ref.invalidate(daySnapshotProvider);
+    ref.invalidate(locationLabelProvider);
+    ref.invalidate(periodTrackingEnabledProvider);
   }
 
   Future<void> _export(WidgetRef ref, AppLocalizations l10n) async {
@@ -243,7 +283,11 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _import(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+  Future<void> _import(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
     final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['json'],
@@ -261,7 +305,11 @@ class SettingsScreen extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Text(l10n.importBackupLabel),
         content: Text(
-          l10n.importSummaryLabel(diff.rowsToAdd, diff.rowsConflicting, diff.rowsIdentical),
+          l10n.importSummaryLabel(
+            diff.rowsToAdd,
+            diff.rowsConflicting,
+            diff.rowsIdentical,
+          ),
         ),
         actions: [
           TextButton(
@@ -310,10 +358,9 @@ class _SettingsGroup extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelLarge
-                    ?.copyWith(color: scheme.primary),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: scheme.primary),
               ),
             ],
           ),
@@ -323,6 +370,43 @@ class _SettingsGroup extends StatelessWidget {
           child: Column(children: children),
         ),
       ],
+    );
+  }
+}
+
+/// A label above its own full-width `SegmentedButton` row, rather than
+/// squeezed into a `ListTile`'s title+trailing — with three segments (or
+/// longer translated labels), sharing that row left the title too little
+/// width and Flutter wrapped it one character per line.
+class _SegmentedSettingTile<T> extends StatelessWidget {
+  final String label;
+  final List<ButtonSegment<T>> segments;
+  final Set<T> selected;
+  final ValueChanged<T> onChanged;
+
+  const _SegmentedSettingTile({
+    required this.label,
+    required this.segments,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodyLarge),
+          const SizedBox(height: 8),
+          SegmentedButton<T>(
+            segments: segments,
+            selected: selected,
+            onSelectionChanged: (selection) => onChanged(selection.first),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -358,84 +442,7 @@ class _ProfilePicker extends StatelessWidget {
   }
 }
 
-class _ManualLocationForm extends StatefulWidget {
-  final double? latitude;
-  final double? longitude;
-  final String? label;
-  final void Function(double lat, double lng, String label) onSave;
-
-  const _ManualLocationForm({
-    required this.latitude,
-    required this.longitude,
-    required this.label,
-    required this.onSave,
-  });
-
-  @override
-  State<_ManualLocationForm> createState() => _ManualLocationFormState();
-}
-
-class _ManualLocationFormState extends State<_ManualLocationForm> {
-  late final _lat = TextEditingController(text: widget.latitude?.toString());
-  late final _lng = TextEditingController(text: widget.longitude?.toString());
-  late final _label = TextEditingController(text: widget.label);
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          TextField(
-            controller: _label,
-            decoration: InputDecoration(labelText: l10n.locationLabelFieldHint),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _lat,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    signed: true,
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(labelText: l10n.latitudeLabel),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _lng,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    signed: true,
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(labelText: l10n.longitudeLabel),
-                ),
-              ),
-            ],
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                final lat = double.tryParse(_lat.text);
-                final lng = double.tryParse(_lng.text);
-                if (lat == null || lng == null) return;
-                widget.onSave(lat, lng, _label.text.trim());
-              },
-              child: Text(l10n.saveLocationLabel),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SettingsValues {
-  final String locationMode;
   final double? latitude;
   final double? longitude;
   final String? locationLabel;
@@ -443,11 +450,12 @@ class _SettingsValues {
   final String normalProfileId;
   final String ramadanProfileId;
   final int closingOffsetMinutes;
-  final bool lateCountsAsQada;
   final String languageCode;
+  final String themeMode;
+  final bool periodTrackingEnabled;
+  final bool sunnahRemindersEnabled;
 
   const _SettingsValues({
-    required this.locationMode,
     required this.latitude,
     required this.longitude,
     required this.locationLabel,
@@ -455,29 +463,35 @@ class _SettingsValues {
     required this.normalProfileId,
     required this.ramadanProfileId,
     required this.closingOffsetMinutes,
-    required this.lateCountsAsQada,
     required this.languageCode,
+    required this.themeMode,
+    required this.periodTrackingEnabled,
+    required this.sunnahRemindersEnabled,
   });
 }
 
 final _settingsValuesProvider = FutureProvider<_SettingsValues>((ref) async {
   final settings = ref.watch(settingsRepositoryProvider);
   return _SettingsValues(
-    locationMode: await settings.getString(SettingsKeys.locationMode) ?? 'automatic',
     latitude: await settings.getDouble(SettingsKeys.latitude),
     longitude: await settings.getDouble(SettingsKeys.longitude),
     locationLabel: await settings.getString(SettingsKeys.locationLabel),
     ramadanMode: await settings.getBool(SettingsKeys.ramadanMode) ?? false,
-    normalProfileId: await settings.getString(SettingsKeys.normalIqamahProfileId) ??
+    normalProfileId:
+        await settings.getString(SettingsKeys.normalIqamahProfileId) ??
         IqamahProfileRepository.normalProfileId,
-    ramadanProfileId: await settings.getString(SettingsKeys.ramadanIqamahProfileId) ??
+    ramadanProfileId:
+        await settings.getString(SettingsKeys.ramadanIqamahProfileId) ??
         IqamahProfileRepository.ramadanProfileId,
     closingOffsetMinutes:
         await settings.getInt(SettingsKeys.closingOffsetMinutes) ??
-            PrayerConfig.defaultClosingOffsetMinutes,
-    lateCountsAsQada:
-        await settings.getBool(SettingsKeys.lateCountsAsQada) ?? false,
+        PrayerConfig.defaultClosingOffsetMinutes,
     languageCode: await settings.getString(SettingsKeys.languageCode) ?? 'ar',
+    themeMode: await settings.getString(SettingsKeys.themeMode) ?? 'system',
+    periodTrackingEnabled:
+        await settings.getBool(SettingsKeys.periodTrackingEnabled) ?? false,
+    sunnahRemindersEnabled:
+        await settings.getBool(SettingsKeys.sunnahRemindersEnabled) ?? false,
   );
 });
 

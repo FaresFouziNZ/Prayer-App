@@ -22,13 +22,14 @@ void main() {
     expect(a, b);
   });
 
-  test('conditionalForPrayer returns exactly closing and endPrompt', () {
+  test('conditionalForPrayer returns exactly closing, endPrompt, and live', () {
     final date = DateTime(2026, 3, 5);
     final conditional = NotificationIds.conditionalForPrayer(date, Prayer.fajr);
 
     expect(conditional, [
       NotificationIds.forEvent(date, Prayer.fajr, NotificationKind.closing),
       NotificationIds.forEvent(date, Prayer.fajr, NotificationKind.endPrompt),
+      NotificationIds.forEvent(date, Prayer.fajr, NotificationKind.live),
     ]);
   });
 }

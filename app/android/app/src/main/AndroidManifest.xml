@@ -5,15 +5,24 @@
          user prompt but is reserved for alarm/calendar-like apps). DND
          toggling (FR-NT-08) needs ACCESS_NOTIFICATION_POLICY, granted via
          the system settings screen, not a runtime dialog.
-         Note: alarms scheduled via AlarmManager do NOT survive a device
-         reboot without a BOOT_COMPLETED broadcast receiver, which needs a
-         native Kotlin class — out of scope for this pass (FR-NT-07 is
-         partial: reminders resume next app launch, not automatically after
-         a reboot). -->
+         Reboot survival (FR-NT-07): AlarmManager alarms don't survive a
+         reboot on their own, but flutter_local_notifications ships its own
+         BOOT_COMPLETED receiver that reloads every pending zonedSchedule
+         call from its SharedPreferences cache and re-arms them — see
+         ScheduledNotificationBootReceiver in the plugin's Android source.
+         It isn't merge-registered by the plugin's own manifest, so it's
+         wired up here instead of writing a native receiver from scratch.
+         Auto-DND (FR-NT-08) uses android_alarm_manager_plus to run Dart
+         code (DndService) at iqamah and iqamah+duration, entirely in Dart —
+         WAKE_LOCK is that plugin's own requirement. The home-screen widget
+         (FR-WD) reuses SCHEDULE_EXACT_ALARM/RECEIVE_BOOT_COMPLETED above via
+         the home_widget plugin's own scheduler + boot receiver. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <!-- Coarse only (SRS FR-PT-03: "coarse is sufficient"); no background
          location permission is requested (NFR-05). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
@@ -48,6 +57,80 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- FR-NT-07 reboot survival — see the permission block above. Only
+             the system can send these actions, so it's not exported. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <!-- FR-LA-07 live countdown: posts the two early, non-interactive
+             phases when its exact alarms (armed from MainActivity) fire.
+             See LiveNotificationReceiver's doc comment. -->
+        <receiver
+            android:name=".LiveNotificationReceiver"
+            android:exported="false"/>
+        <!-- FR-LA-07 reboot survival: unlike flutter_local_notifications'
+             own alarms (covered above), these are armed by raw AlarmManager
+             calls from MainActivity, so they need their own boot receiver —
+             see LiveNotificationBootReceiver's doc comment. -->
+        <receiver
+            android:name=".LiveNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <!-- android_alarm_manager_plus (FR-NT-08) — required components per
+             its own README; not merge-registered by its manifest either. -->
+        <service
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false"/>
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmBroadcastReceiver"
+            android:exported="false"/>
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.RebootBroadcastReceiver"
+            android:enabled="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
+        <!-- FR-WD home-screen widget. Widget providers must be exported so
+             the launcher/system can bind to them — the system is the only
+             sender of APPWIDGET_UPDATE regardless. -->
+        <receiver
+            android:name=".PrayerWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/prayer_widget_info"/>
+        </receiver>
+        <!-- home_widget's own alarm-backed refresh + reboot survival for
+             scheduleWidgetUpdates — not merge-registered by its manifest
+             either, per its own HomeWidgetScheduledUpdateReceiver doc. -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

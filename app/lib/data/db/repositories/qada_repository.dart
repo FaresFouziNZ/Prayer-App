@@ -21,7 +21,9 @@ class QadaRepository {
     String? note,
     DateTime? now,
   }) {
-    return _db.into(_db.qadaPaymentTable).insert(
+    return _db
+        .into(_db.qadaPaymentTable)
+        .insert(
           QadaPaymentTableCompanion.insert(
             id: _uuid.v4(),
             prayer: Codecs.prayerToDb(prayer),
@@ -34,8 +36,9 @@ class QadaRepository {
   }
 
   Future<void> deletePayment(String id) {
-    return (_db.delete(_db.qadaPaymentTable)..where((t) => t.id.equals(id)))
-        .go();
+    return (_db.delete(
+      _db.qadaPaymentTable,
+    )..where((t) => t.id.equals(id))).go();
   }
 
   Future<List<QadaPayment>> getAllPayments() async {
@@ -44,22 +47,25 @@ class QadaRepository {
   }
 
   Stream<List<QadaPayment>> watchAllPayments() {
-    return _db.select(_db.qadaPaymentTable).watch().map(
-          (rows) => rows.map(_paymentFromRow).toList(),
-        );
+    return _db
+        .select(_db.qadaPaymentTable)
+        .watch()
+        .map((rows) => rows.map(_paymentFromRow).toList());
   }
 
   QadaPayment _paymentFromRow(QadaPaymentRow row) => QadaPayment(
-        id: row.id,
-        prayer: Codecs.prayerFromDb(row.prayer),
-        count: row.count,
-        date: Codecs.parseDateKey(row.date),
-        loggedAt: DateTime.parse(row.loggedAt),
-        note: row.note,
-      );
+    id: row.id,
+    prayer: Codecs.prayerFromDb(row.prayer),
+    count: row.count,
+    date: Codecs.parseDateKey(row.date),
+    loggedAt: DateTime.parse(row.loggedAt),
+    note: row.note,
+  );
 
   Future<void> setOpeningBalance(Prayer prayer, int count) {
-    return _db.into(_db.qadaOpeningBalanceTable).insertOnConflictUpdate(
+    return _db
+        .into(_db.qadaOpeningBalanceTable)
+        .insertOnConflictUpdate(
           QadaOpeningBalanceTableCompanion.insert(
             prayer: Codecs.prayerToDb(prayer),
             count: Value(count),
@@ -69,13 +75,14 @@ class QadaRepository {
 
   Future<Map<Prayer, int>> getOpeningBalances() async {
     final rows = await _db.select(_db.qadaOpeningBalanceTable).get();
-    return {
-      for (final row in rows) Codecs.prayerFromDb(row.prayer): row.count,
-    };
+    return {for (final row in rows) Codecs.prayerFromDb(row.prayer): row.count};
   }
 
   Stream<Map<Prayer, int>> watchOpeningBalances() {
-    return _db.select(_db.qadaOpeningBalanceTable).watch().map(
+    return _db
+        .select(_db.qadaOpeningBalanceTable)
+        .watch()
+        .map(
           (rows) => {
             for (final row in rows) Codecs.prayerFromDb(row.prayer): row.count,
           },

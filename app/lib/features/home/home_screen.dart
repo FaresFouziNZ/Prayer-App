@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -10,100 +12,187 @@ import '../../domain/prayer_engine/prayer_day.dart';
 import '../../l10n/app_localizations.dart';
 import 'prayer_log_actions.dart';
 import 'widgets/next_prayer_card.dart';
+import 'widgets/period_day_section.dart';
 import 'widgets/sunnah_checklist.dart';
 import 'widgets/today_prayer_list.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  Timer? _nextEventTimer;
+
+  @override
+  void dispose() {
+    _nextEventTimer?.cancel();
+    super.dispose();
+  }
+
+  /// [NextPrayerCard] ticks its own countdown every second, but *which*
+  /// event is "next" is only recomputed when this screen itself rebuilds —
+  /// without this, the countdown sat at 00:00 forever once an event's
+  /// window ended, instead of moving on to the next prayer. Scheduled fresh
+  /// on every build (rather than a repeating poll) so it fires once, right
+  /// after the current event's window actually ends.
+  void _scheduleSwitchAt(DateTime endAt) {
+    final delay = endAt.difference(DateTime.now()) + const Duration(seconds: 1);
+    _nextEventTimer?.cancel();
+    _nextEventTimer = Timer(delay.isNegative ? Duration.zero : delay, () {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final today = ref.watch(todayProvider);
     final snapshotAsync = ref.watch(daySnapshotProvider(today));
     final logsAsync = ref.watch(dayLogsProvider(today));
+    final locationLabelAsync = ref.watch(locationLabelProvider);
+    final periodTrackingEnabled =
+        ref.watch(periodTrackingEnabledProvider).value ?? false;
+    final isPeriodDay = ref.watch(dayIsPeriodProvider(today)).value ?? false;
     final isArabicLocale = Localizations.localeOf(context).languageCode == 'ar';
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.homeTitle)),
-      body: snapshotAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
-        data: (snapshot) {
-          final now = DateTime.now();
-          final nextEvent = snapshot.events.firstWhere(
-            (event) => event.endAt.isAfter(now),
-            orElse: () => snapshot.events.last,
-          );
-          final hijri = snapshot.hijriDate;
-          final dateLine = '${DateFormat.MMMEd().format(today)} · '
-              '${hijri.day} ${hijri.longMonthName(arabic: isArabicLocale)} ${hijri.year}';
+      body: SafeArea(
+        child: snapshotAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) =>
+              Center(child: Text(l10n.errorLabel(error.toString()))),
+          data: (snapshot) {
+            final now = DateTime.now();
+            final nextEvent = snapshot.events.firstWhere(
+              (event) => event.endAt.isAfter(now),
+              orElse: () => snapshot.events.last,
+            );
+            _scheduleSwitchAt(nextEvent.endAt);
+            final hijri = snapshot.hijriDate;
+            final dateLine =
+                '${DateFormat.MMMEd().format(today)} · '
+                '${hijri.day} ${hijri.longMonthName(arabic: isArabicLocale)} ${hijri.year}';
 
-          return logsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text(l10n.errorLabel(error.toString()))),
-            data: (logs) {
-              final logsByPrayer = {for (final log in logs) log.prayer: log};
-              return RefreshIndicator(
-                onRefresh: () => ref.refresh(daySnapshotProvider(today).future),
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        dateLine,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+            return logsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) =>
+                  Center(child: Text(l10n.errorLabel(error.toString()))),
+              data: (logs) {
+                final logsByPrayer = {for (final log in logs) log.prayer: log};
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.refresh(daySnapshotProvider(today).future),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          dateLine,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
                       ),
-                    ),
-                    if (snapshot.suggestRamadanMode)
-                      _RamadanSuggestionCard(
-                        onEnable: () async {
-                          await ref
-                              .read(settingsRepositoryProvider)
-                              .setBool(SettingsKeys.ramadanMode, true);
-                          ref.invalidate(daySnapshotProvider);
-                        },
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _LocationLine(labelAsync: locationLabelAsync),
                       ),
-                    if (snapshot.ramadanMode) _ImsakIftarCard(prayerDay: snapshot.prayerDay),
-                    NextPrayerCard(event: nextEvent, isJumuah: snapshot.prayerDay.isJumuah),
-                    const SizedBox(height: 16),
-                    TodayPrayerList(
-                      events: snapshot.events,
-                      logsByPrayer: logsByPrayer,
-                      isFriday: snapshot.prayerDay.isJumuah,
-                      onLog: (prayer, status, note) => PrayerLogActions.save(
-                        ref,
-                        date: today,
-                        prayer: prayer,
-                        status: status,
-                        note: note,
-                        isFriday: snapshot.prayerDay.isJumuah,
-                        existing: logsByPrayer[prayer],
+                      if (snapshot.suggestRamadanMode)
+                        _RamadanSuggestionCard(
+                          onEnable: () async {
+                            await ref
+                                .read(settingsRepositoryProvider)
+                                .setBool(SettingsKeys.ramadanMode, true);
+                            ref.invalidate(daySnapshotProvider);
+                          },
+                        ),
+                      if (snapshot.ramadanMode)
+                        _ImsakIftarCard(prayerDay: snapshot.prayerDay),
+                      NextPrayerCard(
+                        event: nextEvent,
+                        isJumuah: snapshot.prayerDay.isJumuah,
                       ),
-                      onDelete: (prayer) {
-                        final existing = logsByPrayer[prayer];
-                        if (existing != null) PrayerLogActions.delete(ref, existing);
-                      },
-                      onCombine: (first, second, status) => PrayerLogActions.combine(
-                        ref,
-                        date: today,
-                        first: first,
-                        second: second,
-                        status: status,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SunnahChecklist(date: today),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                      const SizedBox(height: 16),
+                      if (periodTrackingEnabled) PeriodDayToggle(date: today),
+                      if (isPeriodDay)
+                        const PeriodExcusedNotice()
+                      else
+                        TodayPrayerList(
+                          events: snapshot.events,
+                          logsByPrayer: logsByPrayer,
+                          isFriday: snapshot.prayerDay.isJumuah,
+                          onLog: (prayer, status, excuse) =>
+                              PrayerLogActions.save(
+                                ref,
+                                date: today,
+                                prayer: prayer,
+                                status: status,
+                                excuse: excuse,
+                                isFriday: snapshot.prayerDay.isJumuah,
+                                existing: logsByPrayer[prayer],
+                              ),
+                          onDelete: (prayer) {
+                            final existing = logsByPrayer[prayer];
+                            if (existing != null)
+                              PrayerLogActions.delete(ref, existing);
+                          },
+                          onCombine: (first, second, status) =>
+                              PrayerLogActions.combine(
+                                ref,
+                                date: today,
+                                first: first,
+                                second: second,
+                                status: status,
+                              ),
+                        ),
+                      if (!isPeriodDay) ...[
+                        const SizedBox(height: 16),
+                        SunnahChecklist(date: today),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
+    );
+  }
+}
+
+/// Shows which location today's prayer times are computed for (FR-PT-03),
+/// so the user isn't left guessing whether the schedule matches where they
+/// actually are.
+class _LocationLine extends StatelessWidget {
+  final AsyncValue<String?> labelAsync;
+
+  const _LocationLine({required this.labelAsync});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final label = labelAsync.value ?? l10n.defaultLocationLabel;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.location_on, size: 14, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 4),
+        Text(
+          l10n.prayerTimesForLabel(label),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+      ],
     );
   }
 }
@@ -176,7 +265,11 @@ class _TimeStat extends StatelessWidget {
   final String label;
   final String time;
 
-  const _TimeStat({required this.icon, required this.label, required this.time});
+  const _TimeStat({
+    required this.icon,
+    required this.label,
+    required this.time,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -188,10 +281,9 @@ class _TimeStat extends StatelessWidget {
         Text(time, style: Theme.of(context).textTheme.titleMedium),
         Text(
           label,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: scheme.onSurfaceVariant),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
         ),
       ],
     );

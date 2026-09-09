@@ -22,7 +22,11 @@ class NextPrayerCard extends StatefulWidget {
   final PrayerEvent event;
   final bool isJumuah;
 
-  const NextPrayerCard({super.key, required this.event, required this.isJumuah});
+  const NextPrayerCard({
+    super.key,
+    required this.event,
+    required this.isJumuah,
+  });
 
   @override
   State<NextPrayerCard> createState() => _NextPrayerCardState();
@@ -34,7 +38,10 @@ class _NextPrayerCardState extends State<NextPrayerCard> {
   @override
   void initState() {
     super.initState();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+    _ticker = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => setState(() {}),
+    );
   }
 
   @override
@@ -51,17 +58,41 @@ class _NextPrayerCardState extends State<NextPrayerCard> {
     final event = widget.event;
     final now = DateTime.now();
     final phase = event.phaseAt(now);
+    // What the big countdown is actually counting down to — the eyebrow
+    // above it, not just a generic "time remaining", so it can never be
+    // mistaken for counting down to adhan when it's really iqamah (or vice
+    // versa).
+    final countdownLabel = switch (phase) {
+      LivePhase.beforeAdhan => l10n.timeUntilAdhanLabel,
+      LivePhase.iqamah => l10n.timeUntilIqamahLabel,
+      LivePhase.window || LivePhase.closing => l10n.timeUntilWindowEndLabel,
+    };
     final phaseLabel = switch (phase) {
+      LivePhase.beforeAdhan => null,
       LivePhase.iqamah => l10n.iqamahAtLabel(timeFormat.format(event.iqamahAt)),
-      LivePhase.window => l10n.windowClosesAtLabel(timeFormat.format(event.endAt)),
+      // Window close time is now shown persistently below the adhan time,
+      // in every phase, instead of only appearing here during the window
+      // phase — so it's no longer visible only for that one narrow stretch.
+      LivePhase.window => null,
       LivePhase.closing => l10n.closingSoonLabel,
     };
     final (container, onContainer) = switch (phase) {
+      LivePhase.beforeAdhan => (scheme.surfaceContainerHigh, scheme.onSurface),
       LivePhase.iqamah => (scheme.primaryContainer, scheme.onPrimaryContainer),
-      LivePhase.window => (scheme.tertiaryContainer, scheme.onTertiaryContainer),
-      LivePhase.closing => (scheme.secondaryContainer, scheme.onSecondaryContainer),
+      LivePhase.window => (
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
+      ),
+      LivePhase.closing => (
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+      ),
     };
-    final countdownTarget = phase == LivePhase.iqamah ? event.iqamahAt : event.endAt;
+    final countdownTarget = switch (phase) {
+      LivePhase.beforeAdhan => event.adhanAt,
+      LivePhase.iqamah => event.iqamahAt,
+      LivePhase.window || LivePhase.closing => event.endAt,
+    };
     final remaining = countdownTarget.difference(now);
 
     return Card(
@@ -72,7 +103,11 @@ class _NextPrayerCardState extends State<NextPrayerCard> {
           Positioned(
             right: -18,
             bottom: -18,
-            child: Icon(Icons.mosque_rounded, size: 120, color: onContainer.withValues(alpha: 0.12)),
+            child: Icon(
+              Icons.mosque_rounded,
+              size: 120,
+              color: onContainer.withValues(alpha: 0.12),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(20),
@@ -81,39 +116,52 @@ class _NextPrayerCardState extends State<NextPrayerCard> {
               children: [
                 Text(
                   l10n.nextPrayerLabel.toUpperCase(),
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(color: onContainer.withValues(alpha: 0.75)),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: onContainer.withValues(alpha: 0.75),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  PrayerNames.displayName(context, event.prayer, isJumuah: widget.isJumuah),
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium
-                      ?.copyWith(color: onContainer),
+                  PrayerNames.displayName(
+                    context,
+                    event.prayer,
+                    isJumuah: widget.isJumuah,
+                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineMedium?.copyWith(color: onContainer),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   l10n.adhanAtLabel(timeFormat.format(event.adhanAt)),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(color: onContainer.withValues(alpha: 0.85)),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: onContainer.withValues(alpha: 0.85),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.windowClosesAtLabel(timeFormat.format(event.endAt)),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: onContainer.withValues(alpha: 0.7),
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  l10n.timeRemainingLabel.toUpperCase(),
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(color: onContainer.withValues(alpha: 0.75)),
+                  countdownLabel.toUpperCase(),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: onContainer.withValues(alpha: 0.75),
+                  ),
                 ),
                 const SizedBox(height: 2),
                 _CountdownDigits(remaining: remaining, color: onContainer),
-                const SizedBox(height: 16),
-                _InfoRow(icon: Icons.notifications_active_rounded, label: phaseLabel, color: onContainer),
+                if (phaseLabel != null) ...[
+                  const SizedBox(height: 16),
+                  _InfoRow(
+                    icon: Icons.notifications_active_rounded,
+                    label: phaseLabel,
+                    color: onContainer,
+                  ),
+                ],
               ],
             ),
           ),
@@ -145,10 +193,10 @@ class _CountdownDigits extends StatelessWidget {
       text,
       textDirection: TextDirection.ltr,
       style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w700,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+        color: color,
+        fontWeight: FontWeight.w700,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
     );
   }
 }
@@ -158,7 +206,11 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _InfoRow({required this.icon, required this.label, required this.color});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {

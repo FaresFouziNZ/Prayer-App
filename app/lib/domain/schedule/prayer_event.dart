@@ -24,11 +24,15 @@ class PrayerEvent {
   });
 
   /// The live-surface phase for [at] (defaults to now). See SRS FR-LA-01.
+  /// [beforeAdhan] exists so a countdown shown ahead of adhan counts down
+  /// to *adhan*, not iqamah — `iqamah` on its own only ever means "adhan
+  /// has happened, iqamah hasn't yet" (AC-LA-1).
   LivePhase phaseAt(DateTime at) {
+    if (at.isBefore(adhanAt)) return LivePhase.beforeAdhan;
     if (at.isBefore(iqamahAt)) return LivePhase.iqamah;
     if (at.isBefore(closingAt)) return LivePhase.window;
     return LivePhase.closing;
   }
 }
 
-enum LivePhase { iqamah, window, closing }
+enum LivePhase { beforeAdhan, iqamah, window, closing }
