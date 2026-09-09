@@ -45,8 +45,25 @@ class PrayerConfig {
   /// Default pre-adhan reminder offset (SRS FR-NT-03).
   static const int defaultPreAdhanOffsetMinutes = 10;
 
+  /// "Live start" grace period after adhan (SRS §1.4, FR-LA-01) — when the
+  /// Android live-countdown notification first appears, so it doesn't
+  /// compete with the adhan notification itself. Not user-configurable.
+  static const int liveStartGraceMinutes = 5;
+
   /// Imsak isn't computed by the Adhan library and the SRS doesn't define
   /// an exact formula (FR-RM-02); shown as this many minutes before Fajr,
   /// the common convention among prayer apps.
   static const int imsakBeforeFajrMinutes = 10;
+
+  /// Rawatib (SRS FR-SN) aren't independently timed — the "before" ones are
+  /// prayed in the adhan-to-iqamah gap (reminder fires at adhan itself,
+  /// no offset needed) and the "after" ones shortly once the fard prayer
+  /// is likely finished. Exact completion isn't tracked, so this is a
+  /// fixed buffer past iqamah, the same kind of approximation as the other
+  /// offsets in this file.
+  static const int sunnahAfterOffsetMinutes = 15;
+
+  /// Witr is prayed after Isha's own "after" rawatib, so it gets a longer
+  /// buffer past Isha's iqamah than [sunnahAfterOffsetMinutes].
+  static const int sunnahWitrOffsetMinutes = 30;
 }

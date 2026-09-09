@@ -21,7 +21,8 @@ class SunnahChecklist extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final labels = sunnahLabels(l10n);
     final sunnahAsync = ref.watch(daySunnahProvider(date));
-    final collapsed = ref.watch(sunnahChecklistCollapsedProvider).value ?? false;
+    final collapsed =
+        ref.watch(sunnahChecklistCollapsedProvider).value ?? false;
 
     return sunnahAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -39,14 +40,21 @@ class SunnahChecklist extends ConsumerWidget {
                 onTap: () async {
                   await ref
                       .read(settingsRepositoryProvider)
-                      .setBool(SettingsKeys.sunnahChecklistCollapsed, !collapsed);
+                      .setBool(
+                        SettingsKeys.sunnahChecklistCollapsed,
+                        !collapsed,
+                      );
                   ref.invalidate(sunnahChecklistCollapsedProvider);
                 },
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   child: Row(
                     children: [
-                      Icon(Icons.nights_stay_rounded, size: 18, color: scheme.primary),
+                      Icon(
+                        Icons.nights_stay_rounded,
+                        size: 18,
+                        color: scheme.primary,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -55,10 +63,11 @@ class SunnahChecklist extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        l10n.sunnahProgressLabel(doneCount, SunnahItem.values.length),
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelMedium
+                        l10n.sunnahProgressLabel(
+                          doneCount,
+                          SunnahItem.values.length,
+                        ),
+                        style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
                       AnimatedRotation(
@@ -88,12 +97,23 @@ class SunnahChecklist extends ConsumerWidget {
                               controlAffinity: ListTileControlAffinity.leading,
                               title: Text(labels[item]!),
                               value: doneByItem[item] ?? false,
-                              onChanged: (checked) =>
-                                  ref.read(sunnahRepositoryProvider).setDone(
-                                        date: date,
-                                        item: item,
-                                        done: checked ?? false,
-                                      ),
+                              onChanged: (checked) async {
+                                final done = checked ?? false;
+                                await ref
+                                    .read(sunnahRepositoryProvider)
+                                    .setDone(
+                                      date: date,
+                                      item: item,
+                                      done: done,
+                                    );
+                                // No point still reminding about a rawatib
+                                // just marked done.
+                                if (done) {
+                                  await ref
+                                      .read(sunnahNotificationSchedulerProvider)
+                                      .cancelItem(date, item);
+                                }
+                              },
                             ),
                           const SizedBox(height: 4),
                         ],
