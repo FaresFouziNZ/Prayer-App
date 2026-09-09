@@ -1,0 +1,6 @@
+.vscode/
+.idea/
+.metals/
+.bloop/
+.bsp/
+*.DS_Store

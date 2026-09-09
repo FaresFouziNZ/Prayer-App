@@ -49,13 +49,20 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   geolocator: ^14.0.3
+  geocoding: ^5.0.0
   permission_handler: ^13.0.2
   flutter_local_notifications: ^22.3.0
   timezone: ^0.11.1
   flutter_timezone: ^5.1.0
   do_not_disturb: ^1.0.3
   hijri: ^3.0.1
-
+  android_alarm_manager_plus: ^5.1.1
+  home_widget: ^0.9.4
+  firebase_core: ^4.4.0
+  firebase_auth: ^6.4.0
+  cloud_firestore: ^6.2.0
+  firebase_messaging: ^16.2.0
+  package_info_plus: ^10.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,6 +75,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.15.1
   drift_dev: ^2.34.6
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -111,3 +119,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#0F7A50"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  remove_alpha_ios: true
+  background_color_ios: "#0F7A50"

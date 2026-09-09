@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "574155009756",
+    "project_id": "my-prayer-56710",
+    "storage_bucket": "my-prayer-56710.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574155009756:android:8c549e97704f080e83ce19",
+        "android_client_info": {
+          "package_name": "com.fares.prayerapp.prayer_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA25sRrb2hMnWgXCpoviKkLcpSmmcl52Dg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

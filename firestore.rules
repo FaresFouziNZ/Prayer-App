@@ -1,0 +1,18 @@
+rules_version = '2';
+
+// SRS NFR-07: scoped to the authenticated device — the anonymous Firebase
+// Auth uid a device signs in with (FR-SY-01) doubles as its Firestore
+// document id, so a device can only ever read/write its own data. Cloud
+// Functions use the Admin SDK and bypass these rules entirely (see
+// docs/02-Architecture.md §3.1).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /devices/{deviceId} {
+      allow read, write: if request.auth != null && request.auth.uid == deviceId;
+
+      match /schedule/{day} {
+        allow read, write: if request.auth != null && request.auth.uid == deviceId;
+      }
+    }
+  }
+}
