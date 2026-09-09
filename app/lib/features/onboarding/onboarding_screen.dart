@@ -27,7 +27,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _finish() async {
-    await ref.read(settingsRepositoryProvider).setBool(SettingsKeys.onboardingComplete, true);
+    await ref
+        .read(settingsRepositoryProvider)
+        .setBool(SettingsKeys.onboardingComplete, true);
     if (mounted) context.go('/home');
   }
 
@@ -35,7 +37,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_page == pageCount - 1) {
       _finish();
     } else {
-      _controller.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      _controller.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -115,7 +120,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       width: i == _page ? 22 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: i == _page ? scheme.primary : scheme.outlineVariant,
+                        color: i == _page
+                            ? scheme.primary
+                            : scheme.outlineVariant,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -128,7 +135,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () => _next(pages.length),
-                  child: Text(isLast ? l10n.onboardingGetStarted : l10n.onboardingNext),
+                  child: Text(
+                    isLast ? l10n.onboardingGetStarted : l10n.onboardingNext,
+                  ),
                 ),
               ),
             ),
@@ -170,7 +179,10 @@ class _OnboardingPage extends StatelessWidget {
           Container(
             width: 120,
             height: 120,
-            decoration: BoxDecoration(color: data.container, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: data.container,
+              shape: BoxShape.circle,
+            ),
             child: Icon(data.icon, size: 56, color: data.onContainer),
           ),
           const SizedBox(height: 32),
@@ -182,10 +194,9 @@ class _OnboardingPage extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             data.body,
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             textAlign: TextAlign.center,
           ),
         ],

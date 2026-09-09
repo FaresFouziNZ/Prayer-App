@@ -1,3 +1,4 @@
+import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:geolocator/geolocator.dart';
 
 /// One-shot coarse location fetch (SRS FR-PT-03: "coarse is sufficient").
@@ -32,6 +33,30 @@ class LocationService {
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
     );
-    return LocationFix(latitude: position.latitude, longitude: position.longitude);
+    return LocationFix(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+  }
+
+  /// The city (falling back to the administrative area) nearest a fix, or
+  /// null if reverse geocoding is unsupported or finds nothing — callers
+  /// fall back to showing raw coordinates in that case.
+  Future<String?> resolveCityName(double latitude, double longitude) async {
+    try {
+      final placemarks = await geocoding.Geocoding().placemarkFromCoordinates(
+        latitude,
+        longitude,
+      );
+      if (placemarks.isEmpty) return null;
+      final place = placemarks.first;
+      final city = place.locality?.trim();
+      if (city != null && city.isNotEmpty) return city;
+      final area = place.administrativeArea?.trim();
+      if (area != null && area.isNotEmpty) return area;
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 }
